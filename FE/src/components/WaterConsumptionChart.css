@@ -1,0 +1,355 @@
+/* ── Water Consumption Chart Styles ── */
+
+.water-consumption-chart-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  position: relative;
+  margin-bottom: 1.5rem;
+  transition: all 0.2s ease;
+}
+
+.water-consumption-chart-card:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+
+.water-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.water-chart-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 0.2rem 0;
+  letter-spacing: -0.01em;
+}
+
+.water-chart-subtitle {
+  font-size: 0.8125rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.water-chart-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.unit-toggle-group {
+  display: flex;
+  background: #f1f5f9;
+  padding: 3px;
+  border-radius: 8px;
+}
+
+.unit-toggle-btn {
+  padding: 0.3rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.unit-toggle-btn.active {
+  background: #ffffff;
+  color: #0284c7;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.water-chart-svg-container {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.water-chart-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.chart-bar-rect {
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.chart-bar-group:hover .chart-bar-rect {
+  transform: scaleY(1.03);
+}
+
+/* Tooltip */
+.water-chart-tooltip {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: rgba(15, 23, 42, 0.95);
+  color: #ffffff;
+  padding: 0.65rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+  animation: fadeIn 0.15s ease-out;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  min-width: 190px;
+  z-index: 10;
+}
+
+.tooltip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.tooltip-period {
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.tooltip-badge {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.tooltip-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: #cbd5e1;
+}
+
+.tooltip-row strong {
+  color: #ffffff;
+}
+
+/* Legend */
+.water-chart-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #f1f5f9;
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.legend-dot--tier1 {
+  background: #10b981;
+}
+
+.legend-dot--tier2 {
+  background: #0284c7;
+}
+
+.legend-dot--tier3 {
+  background: #ef4444;
+}
+
+.legend-line--threshold {
+  width: 14px;
+  height: 2px;
+  background: #f59e0b;
+  border-radius: 2px;
+}
+
+.water-chart-empty {
+  padding: 2.5rem;
+  text-align: center;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  color: #64748b;
+}
+
+.water-chart-empty-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+/* ── Slab Tier Visualizer / Progress Gauge ── */
+.slab-visualizer-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  margin-bottom: 1.5rem;
+}
+
+.slab-visualizer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.slab-visualizer-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 0.2rem 0;
+}
+
+.slab-visualizer-subtitle {
+  font-size: 0.8125rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.slab-visualizer-active-tag {
+  background: #e0f2fe;
+  color: #0284c7;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  border: 1px solid #bae6fd;
+}
+
+.slab-gauge-container {
+  margin-bottom: 1rem;
+}
+
+.slab-gauge-segments {
+  display: flex;
+  gap: 6px;
+  height: 28px;
+  background: #f1f5f9;
+  padding: 3px;
+  border-radius: 8px;
+}
+
+.slab-gauge-segment {
+  position: relative;
+  background: #e2e8f0;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.slab-gauge-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  transition: width 0.4s ease-out;
+  border-radius: 6px;
+}
+
+.slab-gauge-segment--tier1 .slab-gauge-fill {
+  background: linear-gradient(90deg, #34d399, #10b981);
+}
+
+.slab-gauge-segment--tier2 .slab-gauge-fill {
+  background: linear-gradient(90deg, #38bdf8, #0284c7);
+}
+
+.slab-gauge-segment--tier3 .slab-gauge-fill {
+  background: linear-gradient(90deg, #f87171, #ef4444);
+}
+
+.slab-gauge-label {
+  position: relative;
+  z-index: 2;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #1e293b;
+  text-shadow: 0 0 4px rgba(255, 255, 255, 0.8);
+}
+
+.slab-pills-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+
+.slab-pill {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+  transition: all 0.2s ease;
+}
+
+.slab-pill--active {
+  background: #f0f9ff;
+  border-color: #7dd3fc;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.1);
+}
+
+.slab-pill-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.slab-pill-title {
+  color: #475569;
+  font-weight: 600;
+}
+
+.slab-pill-rate {
+  color: #0284c7;
+  font-weight: 700;
+}
+
+.slab-pill-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8125rem;
+}
+
+.slab-pill-vol {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.slab-pill-cost {
+  color: #0f172a;
+  font-weight: 700;
+}
