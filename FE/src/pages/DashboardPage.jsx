@@ -24,7 +24,7 @@ function DashboardPage() {
   const totalCollected = bills.filter((b) => b.status === "Paid").reduce((acc, b) => acc + (b.rawAmount || 0), 0);
   const pendingCount = bills.filter((b) => b.status === "Unpaid").length;
   const activeLeaksCount = leaks.filter((l) => l.status === "Active").length;
-  const totalTankersVolume = bulkPurchases.reduce((acc, p) => acc + (Number(p.capacityKL) || 0), 0);
+  const totalTankersVolume = bulkPurchases.reduce((acc, p) => acc + (Number(p.quantity || p.capacityKL) || 0), 0);
 
   return (
     <div className="dash" id="dashboard-page">

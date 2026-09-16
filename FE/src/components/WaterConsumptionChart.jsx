@@ -27,7 +27,7 @@ export function WaterConsumptionChart({
 
   // Normalize data
   const normalizedData = data.map((item, index) => {
-    const rawLiters = item.litersRaw || item.consumptionLiters || (item.consumptionKL ? item.consumptionKL * 1000 : 0) || 12000;
+    const rawLiters = item.litersRaw || item.consumptionLiters || (item.consumptionKL ? Number(item.consumptionKL) * 1000 : 0) || 0;
     const kL = rawLiters / 1000;
     const label = item.period || item.date || item.month || `Period ${index + 1}`;
     const amount = item.amount || (item.rawAmount ? `₹${item.rawAmount.toFixed(2)}` : null);
@@ -326,7 +326,7 @@ export function WaterConsumptionChart({
  * Displays how water consumption is distributed across slabs and proximity to higher rate tiers.
  */
 export function SlabTierVisualizer({
-  consumptionKL = 14.2,
+  consumptionKL = 0,
   plan = null,
 }) {
   const defaultSlabs = [

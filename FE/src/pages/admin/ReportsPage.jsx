@@ -222,7 +222,7 @@ function ReportsPage() {
                         <td><code>{b.invoiceNumber || b.id}</code></td>
                         <td><strong>{b.unitNumber}</strong></td>
                         <td>{b.period}</td>
-                        <td>{b.liters || `${b.consumptionKL || "12.5"} kL`}</td>
+                        <td>{b.liters || `${b.consumptionKL || "0.00"} kL`}</td>
                         <td><span style={{ color: "#0284c7", fontSize: "0.8125rem" }}>{b.planName || "Tiered Plan"}</span></td>
                         <td style={{ fontWeight: 700, color: "#0f172a" }}>{b.amount}</td>
                         <td>

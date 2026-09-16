@@ -105,12 +105,12 @@ export function InvoiceModal({ bill, onClose, onMarkPaid }) {
               </div>
               <div className="info-box-row">
                 <span>Current Meter Reading:</span>
-                <span>{bill.currentReading || `${bill.consumptionKL || "14.20"} kL`}</span>
+                <span>{bill.currentReading || `${bill.consumptionKL || "0.00"} kL`}</span>
               </div>
               <div className="info-box-row info-box-row--highlight">
                 <span>Net Water Consumed / Allocated:</span>
                 <strong style={{ color: "#0284c7" }}>
-                  {bill.consumptionKL || "14.20"} kL ({bill.liters})
+                  {bill.consumptionKL || "0.00"} kL ({bill.liters})
                 </strong>
               </div>
               <div className="info-box-row">
@@ -180,7 +180,7 @@ export function InvoiceModal({ bill, onClose, onMarkPaid }) {
                       <strong>Volumetric Water Usage</strong>
                       <div className="item-sub">Flat consumption rate applied</div>
                     </td>
-                    <td style={{ textAlign: "center" }}>{bill.consumptionKL || "12.50"} kL</td>
+                    <td style={{ textAlign: "center" }}>{bill.consumptionKL || "0.00"} kL</td>
                     <td style={{ textAlign: "right" }}>Standard</td>
                     <td style={{ textAlign: "right" }} className="text-muted">Direct Volumetric</td>
                     <td style={{ textAlign: "right", fontWeight: "700" }}>

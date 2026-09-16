@@ -92,9 +92,13 @@ function ResidentDashboardPage() {
 
   const unpaidBill = bills.find((b) => b.status === "Unpaid");
   const latestBill = bills[0];
-  const currentConsumptionKL = latestBill ? Number(latestBill.consumptionKL) || 14.2 : 14.2;
-  const totalLiters = readings.reduce((acc, r) => acc + (r.consumptionLiters || 0), 0) || 14200;
-  const avgDailyLiters = Math.round((currentConsumptionKL * 1000) / 30);
+  const currentConsumptionKL = latestBill
+    ? (Number(latestBill.consumptionKL) || 0)
+    : (readings.length > 0 ? readings.reduce((acc, r) => acc + (Number(r.consumptionLiters) || 0), 0) / 1000 : 0);
+  const totalLiters = readings.length > 0 
+    ? readings.reduce((acc, r) => acc + (Number(r.consumptionLiters) || 0), 0)
+    : (bills.reduce((acc, b) => acc + (Number(b.litersRaw) || ((Number(b.consumptionKL) || 0) * 1000)), 0));
+  const avgDailyLiters = currentConsumptionKL > 0 ? Math.round((currentConsumptionKL * 1000) / 30) : 0;
 
   const handleOpenPay = (bill) => {
     setActiveBillToPay(bill || unpaidBill);
@@ -151,14 +155,18 @@ function ResidentDashboardPage() {
   });
 
   // Build chart dataset from resident's historical bills/readings
-  const consumptionChartData = (bills.length > 0 ? bills : readings).map((item, idx) => ({
-    id: item.id || idx,
-    period: item.period || item.date || `Month ${idx + 1}`,
-    litersRaw: item.litersRaw || item.consumptionLiters || (item.consumptionKL ? item.consumptionKL * 1000 : 12000),
-    consumptionKL: item.consumptionKL || (item.consumptionLiters ? item.consumptionLiters / 1000 : 12),
-    amount: item.amount || null,
-    status: item.status || "Recorded",
-  })).reverse();
+  const consumptionChartData = (bills.length > 0 ? bills : readings).map((item, idx) => {
+    const rawLiters = item.litersRaw || item.consumptionLiters || (item.consumptionKL ? Number(item.consumptionKL) * 1000 : 0);
+    const kl = item.consumptionKL !== undefined && item.consumptionKL !== null ? Number(item.consumptionKL) : (item.consumptionLiters ? Number(item.consumptionLiters) / 1000 : 0);
+    return {
+      id: item.id || idx,
+      period: item.period || item.date || `Month ${idx + 1}`,
+      litersRaw: rawLiters,
+      consumptionKL: kl,
+      amount: item.amount || null,
+      status: item.status || "Recorded",
+    };
+  }).reverse();
 
   // Pagination slices
   const paginatedReadings = filteredReadings.slice((readingPage - 1) * readingPageSize, readingPage * readingPageSize);
@@ -618,7 +626,7 @@ function ResidentDashboardPage() {
                         <td><strong>{b.period}</strong></td>
                         <td>
                           <div><strong>{b.liters}</strong></div>
-                          <div style={{ fontSize: "0.72rem", color: "#64748b" }}>({b.consumptionKL || "14.2"} kL)</div>
+                          <div style={{ fontSize: "0.72rem", color: "#64748b" }}>({b.consumptionKL || "0.00"} kL)</div>
                         </td>
                         <td style={{ color: "#475569", fontSize: "0.8125rem" }}>
                           ₹{(b.fixedCharge !== undefined && b.fixedCharge !== null ? b.fixedCharge : 100).toFixed(2)}
@@ -769,7 +777,7 @@ function ResidentDashboardPage() {
                   </div>
                   <div className="res-modal__summary-row">
                     <span>Consumption:</span>
-                    <strong>{activeBillToPay.liters} ({activeBillToPay.consumptionKL || "14.2"} kL)</strong>
+                    <strong>{activeBillToPay.liters} ({activeBillToPay.consumptionKL || "0.00"} kL)</strong>
                   </div>
 
                   {/* Itemized Charges in Payment Receipt */}

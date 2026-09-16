@@ -535,9 +535,9 @@ export const dataStore = {
     const newGenerated = households.map((h) => {
       const unitReadings = readings.filter((r) => r.unitNumber === h.unitNumber);
       const latestReading = unitReadings[0];
-      const liters = latestReading ? latestReading.consumptionLiters : 13500;
-      const prevReading = latestReading ? latestReading.previousReading : "100.00";
-      const currReading = latestReading ? latestReading.meterReading : "113.50";
+      const liters = latestReading ? Number(latestReading.consumptionLiters) || 0 : 0;
+      const prevReading = latestReading ? latestReading.previousReading : "0.00";
+      const currReading = latestReading ? latestReading.meterReading : (prevReading || "0.00");
 
       return dataStore.createBillObject({
         household: h,

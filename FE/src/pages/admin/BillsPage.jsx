@@ -110,8 +110,8 @@ function BillsPage() {
   const chartData = bills.slice(0, 8).map((b) => ({
     id: b.id,
     period: `${b.unitNumber} (${b.period?.slice(0, 3)})`,
-    consumptionKL: Number(b.consumptionKL) || 12.5,
-    consumptionLiters: (Number(b.consumptionKL) || 12.5) * 1000,
+    consumptionKL: Number(b.consumptionKL) || 0,
+    consumptionLiters: (Number(b.consumptionKL) || 0) * 1000,
     amount: b.amount,
     rawAmount: b.rawAmount,
     status: b.status,
@@ -180,7 +180,7 @@ function BillsPage() {
             targetThreshold={15000}
           />
           <SlabTierVisualizer
-            consumptionKL={bills.length > 0 ? (Number(bills[0].consumptionKL) || 14.2) : 14.2}
+            consumptionKL={bills.length > 0 ? (Number(bills[0].consumptionKL) || 0) : 0}
             plan={currentSelectedPlan}
           />
         </div>
@@ -363,7 +363,7 @@ function BillsPage() {
                       <td>
                         <div><strong>{b.liters}</strong></div>
                         <div style={{ fontSize: "0.72rem", color: (Number(b.consumptionKL) || 0) > 25 ? "#dc2626" : (Number(b.consumptionKL) || 0) > 10 ? "#0284c7" : "#16a34a", fontWeight: 600 }}>
-                          ({b.consumptionKL || "12.5"} kL)
+                          ({b.consumptionKL || "0.00"} kL)
                         </div>
                       </td>
                       <td style={{ color: "#475569", fontSize: "0.8125rem" }}>
@@ -466,7 +466,7 @@ function BillsPage() {
                 <div>Flat / Unit: <strong>{viewingBillBreakdown.unitNumber}</strong></div>
                 <div>Resident: <strong>{viewingBillBreakdown.residentName}</strong></div>
                 <div>Billing Period: <strong>{viewingBillBreakdown.period}</strong></div>
-                <div>Total Volume: <strong>{viewingBillBreakdown.liters} ({viewingBillBreakdown.consumptionKL || "12.5"} kL)</strong></div>
+                <div>Total Volume: <strong>{viewingBillBreakdown.liters} ({viewingBillBreakdown.consumptionKL || "0.00"} kL)</strong></div>
                 <div style={{ gridColumn: "span 2" }}>Applied Plan: <strong style={{ color: "#0284c7" }}>{viewingBillBreakdown.planName || "Tiered Plan"}</strong></div>
               </div>
 
@@ -506,7 +506,7 @@ function BillsPage() {
                   ) : (
                     <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
                       <td style={{ padding: "0.5rem" }}>Volumetric Water Usage</td>
-                      <td style={{ padding: "0.5rem" }}>{viewingBillBreakdown.consumptionKL || "12.5"} kL</td>
+                      <td style={{ padding: "0.5rem" }}>{viewingBillBreakdown.consumptionKL || "0.00"} kL</td>
                       <td style={{ padding: "0.5rem" }}>Standard</td>
                       <td style={{ padding: "0.5rem", textAlign: "right", fontWeight: 600 }}>
                         ₹{(viewingBillBreakdown.usageCost !== undefined ? viewingBillBreakdown.usageCost : ((viewingBillBreakdown.rawAmount || 0) - (viewingBillBreakdown.fixedCharge || 0))).toFixed(2)}
