@@ -28,7 +28,6 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        // 1. Check if username or email already exists
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new IllegalArgumentException("Username is already taken: " + request.getUsername());
         }
@@ -36,10 +35,9 @@ public class AuthService {
             throw new IllegalArgumentException("Email is already registered: " + request.getEmail());
         }
 
-        // Determine role (default to APARTMENT_ADMIN for new registration signups)
+        // Default to APARTMENT_ADMIN for new registration signups
         User.Role role = request.getRole() != null ? request.getRole() : User.Role.APARTMENT_ADMIN;
 
-        // 2. Resolve or create apartment for admin
         Apartment apartment = null;
         if (request.getApartmentId() != null) {
             apartment = apartmentRepository.findById(request.getApartmentId()).orElse(null);
@@ -60,7 +58,6 @@ public class AuthService {
             }
         }
 
-        // 3. Resolve household if provided
         Household household = null;
         if (request.getHouseholdId() != null) {
             household = householdRepository.findById(request.getHouseholdId()).orElse(null);
@@ -69,7 +66,6 @@ public class AuthService {
             }
         }
 
-        // 4. Create User entity
         User user = new User();
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
@@ -83,7 +79,6 @@ public class AuthService {
 
         User savedUser = userRepository.save(user);
 
-        // 5. Generate JWT token
         Long aptId = savedUser.getApartment() != null ? savedUser.getApartment().getId() : null;
         String token = jwtUtils.generateToken(savedUser.getUsername(), savedUser.getRole().name(), aptId);
 
@@ -103,16 +98,13 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
-        // 1. Authenticate with Spring Security's AuthenticationManager
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
         );
 
-        // 2. Fetch user
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + request.getUsername()));
 
-        // 3. Generate token
         Long aptId = user.getApartment() != null ? user.getApartment().getId() : null;
         String token = jwtUtils.generateToken(user.getUsername(), user.getRole().name(), aptId);
 

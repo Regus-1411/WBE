@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { dataStore } from "../../services/store";
+import { notificationApi } from "../../services/api";
 import Pagination from "../../components/Pagination";
 import InvoiceModal from "../../components/InvoiceModal";
 import { WaterConsumptionChart, SlabTierVisualizer } from "../../components/WaterConsumptionChart";
@@ -18,6 +19,9 @@ function BillsPage() {
   const [viewingBillBreakdown, setViewingBillBreakdown] = useState(null);
   const [viewingOfficialInvoice, setViewingOfficialInvoice] = useState(null);
   const [showAnalytics, setShowAnalytics] = useState(true);
+  const [testingEmail, setTestingEmail] = useState(false);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [testEmailAddress, setTestEmailAddress] = useState("");
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -38,6 +42,134 @@ function BillsPage() {
     loadData();
   }, []);
 
+  const handleSendBillEmail = async (bill) => {
+    const household = households.find((h) => h.unitNumber === bill.unitNumber || String(h.id) === String(bill.householdId));
+    const targetEmail = bill.residentEmail || (household && household.residentEmail);
+
+    if (!targetEmail) {
+      const inputEmail = window.prompt(`No email address on file for Unit ${bill.unitNumber} (${bill.residentName}). Enter resident email:`);
+      if (!inputEmail) return;
+      return sendBillEmailDirect(bill, inputEmail.trim());
+    }
+
+    sendBillEmailDirect(bill, targetEmail);
+  };
+
+  const sendBillEmailDirect = async (bill, targetEmail) => {
+    try {
+      setNotification(`📧 Dispatching real bill email to ${targetEmail}...`);
+      await notificationApi.sendBill({
+        email: targetEmail,
+        residentName: bill.residentName || "Resident",
+        unitNumber: bill.unitNumber,
+        invoiceNumber: bill.invoiceNumber || bill.id,
+        period: bill.period,
+        consumptionKL: bill.consumptionKL || 0,
+        totalAmount: bill.rawAmount || 0,
+        dueDate: bill.dueDate || "20th of month",
+        apartmentName: "Palm Meadows Society",
+      });
+      setNotification(`✓ Real invoice email dispatched to ${targetEmail}!`);
+      setTimeout(() => setNotification(""), 5000);
+    } catch (err) {
+      setNotification(`⚠️ Email dispatch: ${err.message}`);
+      setTimeout(() => setNotification(""), 6000);
+    }
+  };
+
+  const handleSendReminderEmail = async (bill) => {
+    const household = households.find((h) => h.unitNumber === bill.unitNumber || String(h.id) === String(bill.householdId));
+    const targetEmail = bill.residentEmail || (household && household.residentEmail);
+
+    if (!targetEmail) {
+      const inputEmail = window.prompt(`Enter email address to send payment reminder for Unit ${bill.unitNumber}:`);
+      if (!inputEmail) return;
+      return sendReminderEmailDirect(bill, inputEmail.trim());
+    }
+
+    sendReminderEmailDirect(bill, targetEmail);
+  };
+
+  const sendReminderEmailDirect = async (bill, targetEmail) => {
+    try {
+      setNotification(`🔔 Dispatching payment reminder to ${targetEmail}...`);
+      await notificationApi.sendReminder({
+        email: targetEmail,
+        residentName: bill.residentName || "Resident",
+        unitNumber: bill.unitNumber,
+        invoiceNumber: bill.invoiceNumber || bill.id,
+        period: bill.period,
+        totalAmount: bill.rawAmount || 0,
+        dueDate: bill.dueDate || "Immediate",
+        apartmentName: "Palm Meadows Society",
+      });
+      setNotification(`✓ Payment reminder sent to ${targetEmail}!`);
+      setTimeout(() => setNotification(""), 5000);
+    } catch (err) {
+      setNotification(`⚠️ Reminder dispatch: ${err.message}`);
+      setTimeout(() => setNotification(""), 6000);
+    }
+  };
+
+  const handleBatchEmail = async () => {
+    const cycleBills = bills.filter((b) => b.period === billingMonth);
+    if (cycleBills.length === 0) {
+      setNotification(`❌ No bills found for ${billingMonth} to dispatch.`);
+      return;
+    }
+
+    if (!window.confirm(`Send real bill notification emails to all ${cycleBills.length} households for ${billingMonth}?`)) {
+      return;
+    }
+
+    let sentCount = 0;
+    for (const b of cycleBills) {
+      const household = households.find((h) => h.unitNumber === b.unitNumber || String(h.id) === String(b.householdId));
+      const targetEmail = b.residentEmail || (household && household.residentEmail);
+      if (targetEmail) {
+        try {
+          await notificationApi.sendBill({
+            email: targetEmail,
+            residentName: b.residentName || "Resident",
+            unitNumber: b.unitNumber,
+            invoiceNumber: b.invoiceNumber || b.id,
+            period: b.period,
+            consumptionKL: b.consumptionKL || 0,
+            totalAmount: b.rawAmount || 0,
+            dueDate: b.dueDate || "20th of month",
+            apartmentName: "Palm Meadows Society",
+          });
+          sentCount++;
+        } catch (e) {
+          console.error("Batch email failure for unit:", b.unitNumber, e);
+        }
+      }
+    }
+
+    setNotification(`✓ Batch email run complete: Sent ${sentCount} bill emails for ${billingMonth}.`);
+    setTimeout(() => setNotification(""), 5000);
+  };
+
+  const handleTestSmtp = async (e) => {
+    e.preventDefault();
+    if (!testEmailAddress.trim()) return;
+
+    setTestingEmail(true);
+    try {
+      setNotification(`🧪 Sending test email to ${testEmailAddress}...`);
+      const res = await notificationApi.testEmail(testEmailAddress.trim());
+      setNotification(res.message || `✓ Test email successfully delivered to ${testEmailAddress}! Check your inbox.`);
+      setEmailModalOpen(false);
+      setTimeout(() => setNotification(""), 7000);
+    } catch (err) {
+      setNotification(`❌ SMTP Diagnostic Failed: ${err.message}`);
+      setTimeout(() => setNotification(""), 7000);
+    } finally {
+      setTestingEmail(false);
+    }
+  };
+
+
   const handleGenerate = (e) => {
     e.preventDefault();
     if (households.length === 0) {
@@ -45,15 +177,22 @@ function BillsPage() {
       return;
     }
 
-    const generated = dataStore.generateBillsForCycle(
+    const result = dataStore.generateBillsForCycle(
       billingMonth,
       selectedPlanId,
       overrideFixedCharge !== "" ? Number(overrideFixedCharge) : null
     );
     loadData();
     setCurrentPage(1);
-    setNotification(`✓ Generated ${generated.length} monthly invoices for ${billingMonth} with 100% verified slab calculations!`);
-    setTimeout(() => setNotification(""), 4500);
+
+    if (result.generatedCount === 0) {
+      setNotification(`⚠️ Duplicate billing prevented: All ${result.totalHouseholds} registered flats already have invoices generated for ${billingMonth}.`);
+    } else if (result.skippedCount > 0) {
+      setNotification(`✓ Generated ${result.generatedCount} new invoices for ${billingMonth} (${result.skippedCount} flats were already billed and skipped to prevent duplicates).`);
+    } else {
+      setNotification(`✓ Generated ${result.generatedCount} monthly invoices for ${billingMonth} with 100% verified slab calculations!`);
+    }
+    setTimeout(() => setNotification(""), 5000);
   };
 
   const handleMarkPaid = (id) => {
@@ -124,10 +263,24 @@ function BillsPage() {
         <div>
           <h1 className="admin-page__title">Bill & Invoice Management</h1>
           <p className="admin-page__subtitle">
-            Generate monthly consumption bills, apply dynamic tariff slabs, track receivables, and view verified itemized invoices
+            Generate monthly consumption bills, apply dynamic tariff slabs, dispatch real email invoices to residents, and track receivables
           </p>
         </div>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
+        <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
+          <button
+            className="btn-secondary"
+            onClick={() => setEmailModalOpen(true)}
+            style={{ fontSize: "0.8125rem", display: "flex", alignItems: "center", gap: "0.4rem", background: "#f0fdf4", borderColor: "#86efac", color: "#166534", fontWeight: 700 }}
+          >
+            🧪 Test Real Email (SMTP)
+          </button>
+          <button
+            className="btn-secondary"
+            onClick={handleBatchEmail}
+            style={{ fontSize: "0.8125rem", display: "flex", alignItems: "center", gap: "0.4rem", background: "#f0f9ff", borderColor: "#bae6fd", color: "#0369a1", fontWeight: 700 }}
+          >
+            ⚡ Batch Email {billingMonth} Invoices
+          </button>
           <button
             className="btn-secondary"
             onClick={() => setShowAnalytics(!showAnalytics)}
@@ -137,6 +290,7 @@ function BillsPage() {
           </button>
         </div>
       </div>
+
 
       {notification && (
         <div className={`notification-banner ${notification.startsWith("✓") ? "notification-banner--success" : "notification-banner--error"}`}>
@@ -381,10 +535,10 @@ function BillsPage() {
                         </span>
                       </td>
                       <td>
-                        <div style={{ display: "flex", gap: "0.4rem", justifyContent: "center" }}>
+                        <div style={{ display: "flex", gap: "0.35rem", justifyContent: "center", flexWrap: "wrap" }}>
                           <button
                             className="btn-secondary"
-                            style={{ fontSize: "0.75rem", padding: "0.3rem 0.55rem" }}
+                            style={{ fontSize: "0.75rem", padding: "0.3rem 0.5rem" }}
                             onClick={() => setViewingOfficialInvoice(b)}
                             title="View official printable invoice"
                           >
@@ -392,7 +546,25 @@ function BillsPage() {
                           </button>
                           <button
                             className="btn-secondary"
-                            style={{ fontSize: "0.75rem", padding: "0.3rem 0.55rem" }}
+                            style={{ fontSize: "0.75rem", padding: "0.3rem 0.5rem", background: "#f0f9ff", borderColor: "#bae6fd", color: "#0284c7" }}
+                            onClick={() => handleSendBillEmail(b)}
+                            title="Send real email invoice with consumption details to resident"
+                          >
+                            📧 Email
+                          </button>
+                          {b.status !== "Paid" && (
+                            <button
+                              className="btn-secondary"
+                              style={{ fontSize: "0.75rem", padding: "0.3rem 0.5rem", background: "#fffbeb", borderColor: "#fde68a", color: "#b45309" }}
+                              onClick={() => handleSendReminderEmail(b)}
+                              title="Send payment reminder email to resident"
+                            >
+                              🔔 Reminder
+                            </button>
+                          )}
+                          <button
+                            className="btn-secondary"
+                            style={{ fontSize: "0.75rem", padding: "0.3rem 0.5rem" }}
                             onClick={() => setViewingBillBreakdown(b)}
                             title="Inspect slab tier calculation"
                           >
@@ -402,7 +574,7 @@ function BillsPage() {
                             <button
                               className="btn-table-action"
                               onClick={() => handleMarkPaid(b.id)}
-                              style={{ fontSize: "0.75rem", padding: "0.3rem 0.55rem" }}
+                              style={{ fontSize: "0.75rem", padding: "0.3rem 0.5rem" }}
                             >
                               Mark Paid
                             </button>
@@ -414,7 +586,7 @@ function BillsPage() {
                           <button
                             className="btn-table-action"
                             onClick={() => handleDeleteBill(b.id)}
-                            style={{ fontSize: "0.75rem", padding: "0.3rem 0.55rem", color: "var(--red-600)", borderColor: "#fecaca" }}
+                            style={{ fontSize: "0.75rem", padding: "0.3rem 0.5rem", color: "var(--red-600)", borderColor: "#fecaca" }}
                             title="Delete this invoice"
                           >
                             Delete
@@ -439,6 +611,51 @@ function BillsPage() {
           </>
         )}
       </div>
+
+      {/* Test SMTP Email Modal */}
+      {emailModalOpen && (
+        <div className="modal-backdrop" id="test-smtp-modal" onClick={() => setEmailModalOpen(false)}>
+          <div className="modal-card" style={{ maxWidth: "480px" }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>🧪 Test Live SMTP Email Delivery</h2>
+              <button className="modal-close" onClick={() => setEmailModalOpen(false)}>×</button>
+            </div>
+
+            <form onSubmit={handleTestSmtp} style={{ padding: "1.25rem 0" }}>
+              <p style={{ fontSize: "0.875rem", color: "#475569", margin: "0 0 1.25rem 0", lineHeight: 1.5 }}>
+                Enter your own email address below. We will dispatch a live verification email through your configured SMTP server to confirm everything works.
+              </p>
+
+              <div className="form-group" style={{ marginBottom: "1.25rem" }}>
+                <label style={{ display: "block", marginBottom: "6px", fontWeight: 600, fontSize: "0.8125rem" }}>
+                  Destination Email Address *
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="e.g. yourname@gmail.com"
+                  value={testEmailAddress}
+                  onChange={(e) => setTestEmailAddress(e.target.value)}
+                  style={{ width: "100%", padding: "0.6rem 0.8rem", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                />
+              </div>
+
+              <div style={{ background: "#f8fafc", padding: "0.85rem", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "0.78rem", color: "#64748b", marginBottom: "1.25rem" }}>
+                💡 <strong>Tip:</strong> Ensure your Google App Password or Brevo SMTP credentials are added to <code>BE/src/main/resources/application.properties</code>.
+              </div>
+
+              <div className="modal-footer" style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+                <button type="button" className="btn-secondary" onClick={() => setEmailModalOpen(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary" disabled={testingEmail}>
+                  {testingEmail ? "Sending Email..." : "🚀 Send Live Test Email"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Official Printable Invoice Modal */}
       {viewingOfficialInvoice && (
@@ -547,3 +764,4 @@ function BillsPage() {
 }
 
 export default BillsPage;
+

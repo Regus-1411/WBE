@@ -42,18 +42,16 @@ public class WaterUsageLogService {
         Household household = householdRepository.findById(request.getHouseholdId())
                 .orElseThrow(() -> new IllegalArgumentException("Household not found with ID: " + request.getHouseholdId()));
 
-        // Duplicate check for this household on the same date
         if (waterUsageLogRepository.existsByHouseholdIdAndReadingDate(request.getHouseholdId(), request.getReadingDate())) {
             throw new IllegalArgumentException("A reading for unit " + household.getUnitNumber() + " on " + request.getReadingDate() + " already exists.");
         }
 
-        // Find latest previous reading
         Optional<WaterUsageLog> lastLogOpt = waterUsageLogRepository.findTopByHouseholdIdOrderByReadingDateDesc(request.getHouseholdId());
         BigDecimal previousReading = lastLogOpt.map(WaterUsageLog::getMeterReading).orElse(BigDecimal.ZERO);
 
         BigDecimal consumption = request.getMeterReading().subtract(previousReading);
         if (consumption.compareTo(BigDecimal.ZERO) < 0) {
-            // If meter was replaced or rollover, consumption can be adjusted or logged
+            // If meter was replaced or rollover, treat as zero consumption
             consumption = BigDecimal.ZERO;
         }
 
@@ -94,12 +92,10 @@ public class WaterUsageLogService {
 
             while ((line = reader.readLine()) != null) {
                 lineNumber++;
-                // Skip empty lines
                 if (line.trim().isEmpty()) {
                     continue;
                 }
 
-                // Check header
                 if (lineNumber == 1 && (line.toLowerCase().contains("unit") || line.toLowerCase().contains("meter"))) {
                     continue; // Skip CSV header row
                 }
@@ -118,7 +114,6 @@ public class WaterUsageLogService {
                 String readingStr = tokens[2].trim();
                 String notes = tokens.length > 3 ? tokens[3].trim() : null;
 
-                // 1. Validate household
                 Optional<Household> householdOpt = householdRepository.findByUnitNumberAndApartmentId(unitNumber, apartmentId);
                 if (householdOpt.isEmpty()) {
                     errors.add("Line " + lineNumber + ": Unit number '" + unitNumber + "' not found in apartment ID " + apartmentId);
@@ -127,7 +122,6 @@ public class WaterUsageLogService {
                 }
                 Household household = householdOpt.get();
 
-                // 2. Parse Date
                 LocalDate readingDate;
                 try {
                     readingDate = LocalDate.parse(dateStr, DATE_FORMATTER);
@@ -137,7 +131,6 @@ public class WaterUsageLogService {
                     continue;
                 }
 
-                // 3. Parse Meter Reading
                 BigDecimal meterReading;
                 try {
                     meterReading = new BigDecimal(readingStr);
@@ -152,13 +145,11 @@ public class WaterUsageLogService {
                     continue;
                 }
 
-                // 4. Duplicate Check
                 if (waterUsageLogRepository.existsByHouseholdIdAndReadingDate(household.getId(), readingDate)) {
                     skippedDuplicates++;
                     continue;
                 }
 
-                // 5. Calculate consumption
                 Optional<WaterUsageLog> lastLogOpt = waterUsageLogRepository.findTopByHouseholdIdOrderByReadingDateDesc(household.getId());
                 BigDecimal previousReading = lastLogOpt.map(WaterUsageLog::getMeterReading).orElse(BigDecimal.ZERO);
                 BigDecimal consumption = meterReading.subtract(previousReading);
@@ -166,7 +157,6 @@ public class WaterUsageLogService {
                     consumption = BigDecimal.ZERO;
                 }
 
-                // 6. Save Log
                 WaterUsageLog logEntity = new WaterUsageLog();
                 logEntity.setHousehold(household);
                 logEntity.setReadingDate(readingDate);

@@ -37,23 +37,19 @@ public class AdminResidentService {
     public ResidentResponse createResident(CreateResidentRequest request) {
         log.info("Creating resident account for email: {}, flat: {}", request.getEmail(), request.getUnitNumber());
 
-        // 1. Check if email already exists
         if (userRepository.existsByEmail(request.getEmail().trim())) {
             throw new IllegalArgumentException("A user with email " + request.getEmail() + " already exists.");
         }
 
-        // 2. Resolve Apartment
         Apartment apartment = apartmentRepository.findById(request.getApartmentId())
                 .orElseThrow(() -> new IllegalArgumentException("Apartment not found with ID: " + request.getApartmentId()));
 
-        // 3. Resolve or Link Household
         Household household = null;
         if (request.getHouseholdId() != null) {
             household = householdRepository.findById(request.getHouseholdId()).orElse(null);
         } else if (request.getUnitNumber() != null && !request.getUnitNumber().isBlank()) {
             household = householdRepository.findByUnitNumberAndApartmentId(request.getUnitNumber().trim(), apartment.getId())
                     .orElseGet(() -> {
-                        // Create household if not present yet
                         Household newHousehold = new Household();
                         newHousehold.setUnitNumber(request.getUnitNumber().trim());
                         newHousehold.setBlock(request.getBlock() != null ? request.getBlock().trim() : "Main Block");
@@ -63,7 +59,6 @@ public class AdminResidentService {
                     });
         }
 
-        // 4. Generate unique username if not specified
         String username = request.getUsername();
         if (username == null || username.isBlank()) {
             username = generateUniqueUsername(request.getEmail(), request.getUnitNumber());
@@ -74,13 +69,11 @@ public class AdminResidentService {
             }
         }
 
-        // 5. Generate secure temporary password if not provided
         String plainPassword = request.getPassword();
         if (plainPassword == null || plainPassword.isBlank()) {
             plainPassword = generateTemporaryPassword();
         }
 
-        // 6. Save Resident User
         User resident = new User();
         resident.setUsername(username);
         resident.setEmail(request.getEmail().trim().toLowerCase());
@@ -95,7 +88,6 @@ public class AdminResidentService {
         User savedUser = userRepository.save(resident);
         log.info("✅ Saved resident user ID: {}, username: {}", savedUser.getId(), savedUser.getUsername());
 
-        // 7. Dispatch Confirmation & Credentials Email (Asynchronously)
         boolean emailDispatched = false;
         if (Boolean.TRUE.equals(request.getSendEmail())) {
             String unitDisplay = household != null ? household.getUnitNumber() : request.getUnitNumber();
@@ -169,14 +161,11 @@ public class AdminResidentService {
         }
 
         String candidate = base;
-        int count = 1;
-        while (userRepository.existsByUsername(candidate)) {
+        for (int attempt = 0; attempt < 20 && userRepository.existsByUsername(candidate); attempt++) {
             candidate = base + "_" + (100 + RANDOM.nextInt(900));
-            count++;
-            if (count > 20) {
-                candidate = base + "_" + System.currentTimeMillis() % 10000;
-                break;
-            }
+        }
+        if (userRepository.existsByUsername(candidate)) {
+            candidate = base + "_" + System.currentTimeMillis() % 10000;
         }
         return candidate;
     }

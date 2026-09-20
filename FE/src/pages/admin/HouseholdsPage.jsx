@@ -106,8 +106,9 @@ function HouseholdsPage() {
       const newUnit = dataStore.addHousehold(flatForm);
       loadData();
       setFlatForm({ unitNumber: "", block: "Block A", floor: "1st Floor", meterSerialNumber: "" });
-      showMsg(`✓ Flat ${newUnit.unitNumber} added successfully to ${newUnit.block}!`);
+      showMsg(`✓ Flat ${newUnit.unitNumber} registered! Switch to Tab 2 to assign resident email.`);
       setResidentForm((prev) => ({ ...prev, householdId: String(newUnit.id) }));
+      setActiveFormTab("resident");
     } catch (err) {
       showMsg(`❌ Error: ${err.message}`);
     }
@@ -127,28 +128,29 @@ function HouseholdsPage() {
     }
 
     if (!residentForm.fullName || !residentForm.fullName.trim()) {
-      const err = "❌ Please enter the resident's Full Name.";
+      const err = "❌ Mandatory Field: Please enter the resident's Full Name.";
       setResidentFormStatus({ type: "error", message: err });
       showMsg(err);
       return;
     }
 
-    if (!residentForm.email || !residentForm.email.trim()) {
-      const err = "❌ Please enter the resident's Email address.";
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!residentForm.email || !residentForm.email.trim() || !emailRegex.test(residentForm.email.trim())) {
+      const err = "❌ Mandatory Field: Every resident must have a valid Email address (e.g. user@domain.com).";
       setResidentFormStatus({ type: "error", message: err });
       showMsg(err);
       return;
     }
 
     if (!residentForm.username || !residentForm.username.trim()) {
-      const err = "❌ Please enter a Login User ID (Username).";
+      const err = "❌ Mandatory Field: Please enter a Login User ID (Username).";
       setResidentFormStatus({ type: "error", message: err });
       showMsg(err);
       return;
     }
 
     if (!residentForm.password || !residentForm.password.trim()) {
-      const err = "❌ Please enter a Login Password.";
+      const err = "❌ Mandatory Field: Please enter a Login Password.";
       setResidentFormStatus({ type: "error", message: err });
       showMsg(err);
       return;
@@ -206,7 +208,7 @@ function HouseholdsPage() {
         password: residentForm.password.trim(),
       });
 
-      const succMsg = `✓ Account created & allocated to Flat ${newRes.householdUnitNumber}! Credentials sent to ${newRes.email}.`;
+      const succMsg = `✓ Verified Resident Account created & attached to Flat ${newRes.householdUnitNumber}! Credentials dispatched to ${newRes.email}.`;
       setResidentFormStatus({ type: "success", message: succMsg });
       showMsg(succMsg);
 
@@ -230,6 +232,7 @@ function HouseholdsPage() {
       showMsg(`❌ Error: ${err.message}`);
     }
   };
+
 
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to remove this unit? All associated bills and resident allocations will also be deleted simultaneously.")) {
@@ -463,10 +466,14 @@ function HouseholdsPage() {
               </div>
             ) : (
               <>
-                <div className="direct-form__grid">
-                  <div className="form-group">
-                    <label>Select Assigned Flat *</label>
+                <div className="resident-form-grid">
+                  <div className="form-field">
+                    <label className="form-label">
+                      <span>Assigned Flat</span>
+                      <span className="req-star">*</span>
+                    </label>
                     <select
+                      className="form-control"
                       value={currentSelectedHouseholdId}
                       onChange={(e) => {
                         setResidentForm({ ...residentForm, householdId: e.target.value });
@@ -475,16 +482,20 @@ function HouseholdsPage() {
                     >
                       {households.map((h) => (
                         <option key={h.id} value={String(h.id)}>
-                          {h.unitNumber} ({h.block}) {h.residentName ? `— Current: ${h.residentName}` : "— [Vacant]"}
+                          Unit {h.unitNumber} ({h.block}) {h.residentName ? `— ${h.residentName}` : "— [Vacant]"}
                         </option>
                       ))}
                     </select>
                   </div>
 
-                  <div className="form-group">
-                    <label>Resident Full Name *</label>
+                  <div className="form-field">
+                    <label className="form-label">
+                      <span>Resident Full Name</span>
+                      <span className="req-star">*</span>
+                    </label>
                     <input
                       type="text"
+                      className="form-control"
                       placeholder="e.g. Ramesh Patel"
                       value={residentForm.fullName}
                       onChange={(e) => {
@@ -494,32 +505,36 @@ function HouseholdsPage() {
                     />
                   </div>
 
-                  {/* Email Field with Existence Check */}
-                  <div className="form-group email-input-container">
-                    <label>Resident Email (For Credentials Dispatch) *</label>
+                  <div className="form-field email-field-col">
+                    <div className="form-label-row">
+                      <label className="form-label" style={{ margin: 0 }}>
+                        <span>Resident Email</span>
+                        <span className="req-star">*</span>
+                      </label>
+                      {emailValidation.status !== "idle" && (
+                        <span className={`email-status-pill email-status-pill--${emailValidation.status}`}>
+                          {emailValidation.message}
+                        </span>
+                      )}
+                    </div>
                     <input
-                      type="text"
+                      type="email"
+                      className="form-control"
                       placeholder="e.g. ramesh@example.com"
                       value={residentForm.email}
                       onChange={handleEmailChange}
                     />
-                    {emailValidation.status !== "idle" && (
-                      <div className={`email-feedback email-feedback--${emailValidation.status}`}>
-                        {emailValidation.message}
-                      </div>
-                    )}
-                    {emailValidation.status === "idle" && (
-                      <span className="email-feedback email-feedback--idle">
-                        ℹ️ Login credentials will be emailed to this address upon allocation
-                      </span>
-                    )}
                   </div>
 
-                  <div className="form-group">
-                    <label>Phone Number</label>
+                  <div className="form-field">
+                    <label className="form-label">
+                      <span>Phone Number</span>
+                      <span className="opt-tag">(Optional)</span>
+                    </label>
                     <input
-                      type="text"
-                      placeholder="e.g. +91 98765 00000"
+                      type="tel"
+                      className="form-control"
+                      placeholder="e.g. +91 98765 43210"
                       value={residentForm.phone}
                       onChange={(e) => {
                         setResidentForm({ ...residentForm, phone: e.target.value });
@@ -528,11 +543,15 @@ function HouseholdsPage() {
                     />
                   </div>
 
-                  <div className="form-group">
-                    <label>Login User ID (Username) *</label>
+                  <div className="form-field">
+                    <label className="form-label">
+                      <span>Login User ID (Username)</span>
+                      <span className="req-star">*</span>
+                    </label>
                     <input
                       type="text"
-                      placeholder="e.g. ramesh_patel or flat_101"
+                      className="form-control"
+                      placeholder="e.g. ramesh_patel"
                       value={residentForm.username}
                       onChange={(e) => {
                         setResidentForm({ ...residentForm, username: e.target.value });
@@ -541,10 +560,14 @@ function HouseholdsPage() {
                     />
                   </div>
 
-                  <div className="form-group">
-                    <label>Login Password *</label>
+                  <div className="form-field">
+                    <label className="form-label">
+                      <span>Login Password</span>
+                      <span className="req-star">*</span>
+                    </label>
                     <input
                       type="text"
+                      className="form-control"
                       placeholder="e.g. securePass123"
                       value={residentForm.password}
                       onChange={(e) => {
@@ -555,23 +578,30 @@ function HouseholdsPage() {
                   </div>
                 </div>
 
-                <div className="direct-form__actions">
-                  {/* Inline Alert directly inside the form card */}
-                  {residentFormStatus.message && (
-                    <div className={`form-inline-alert ${residentFormStatus.type === "success" ? "form-inline-alert--success" : "form-inline-alert--error"}`}>
-                      {residentFormStatus.message}
-                    </div>
-                  )}
+                <div className="resident-form-footer">
+                  <div className="form-helper-note">
+                    <span className="helper-icon">ℹ️</span>
+                    <span><strong>Automated Dispatch:</strong> Credentials and monthly water consumption invoices will be automatically sent to the registered resident email.</span>
+                  </div>
 
-                  <button 
-                    type="button" 
-                    className="btn-primary"
-                    id="btn-allocate-resident"
-                    onClick={handleCreateResident}
-                  >
-                    ✓ Allocate Flat & Send Credentials Email
-                  </button>
+                  <div className="direct-form__actions">
+                    {residentFormStatus.message && (
+                      <div className={`form-inline-alert ${residentFormStatus.type === "success" ? "form-inline-alert--success" : "form-inline-alert--error"}`}>
+                        {residentFormStatus.message}
+                      </div>
+                    )}
+
+                    <button 
+                      type="button" 
+                      className="btn-allocate-submit"
+                      id="btn-allocate-resident"
+                      onClick={handleCreateResident}
+                    >
+                      ✓ Allocate Flat & Send Credentials Email
+                    </button>
+                  </div>
                 </div>
+
               </>
             )}
           </div>
@@ -657,7 +687,18 @@ function HouseholdsPage() {
                       {h.residentName ? (
                         <strong>{h.residentName}</strong>
                       ) : (
-                        <span className="text-muted">Vacant</span>
+                        <button
+                          type="button"
+                          className="btn-table-action"
+                          style={{ fontSize: "0.72rem", padding: "0.2rem 0.5rem", color: "#d97706", borderColor: "#fde68a", background: "#fffbeb" }}
+                          onClick={() => {
+                            setResidentForm((prev) => ({ ...prev, householdId: String(h.id) }));
+                            setActiveFormTab("resident");
+                            window.scrollTo({ top: 200, behavior: "smooth" });
+                          }}
+                        >
+                          + Assign Resident
+                        </button>
                       )}
                     </td>
                     <td>
@@ -669,16 +710,27 @@ function HouseholdsPage() {
                     </td>
                     <td>
                       {h.residentEmail ? (
-                        <span style={{ fontSize: "0.8125rem", color: "var(--blue-600)" }}>
-                          {h.residentEmail}
+                        <span style={{ fontSize: "0.8125rem", color: "#0284c7", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "3px" }}>
+                          ✓ {h.residentEmail}
                         </span>
                       ) : (
-                        <span className="text-muted">—</span>
+                        <button
+                          type="button"
+                          className="btn-table-action"
+                          style={{ fontSize: "0.72rem", padding: "0.2rem 0.5rem", color: "#dc2626", borderColor: "#fecaca", background: "#fef2f2", fontWeight: 600 }}
+                          onClick={() => {
+                            setResidentForm((prev) => ({ ...prev, householdId: String(h.id) }));
+                            setActiveFormTab("resident");
+                            window.scrollTo({ top: 200, behavior: "smooth" });
+                          }}
+                        >
+                          ⚠️ Add Mandatory Email
+                        </button>
                       )}
                     </td>
                     <td>
-                      <span className={`badge ${h.status === "Active" ? "badge--success" : "badge--warning"}`}>
-                        {h.status || "Active"}
+                      <span className={`badge ${h.residentEmail ? "badge--success" : "badge--warning"}`}>
+                        {h.residentEmail ? "Verified & Active" : "Pending Email"}
                       </span>
                     </td>
                     <td style={{ textAlign: "center" }}>
@@ -690,6 +742,7 @@ function HouseholdsPage() {
                         Delete
                       </button>
                     </td>
+
                   </tr>
                 ))}
               </tbody>

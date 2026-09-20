@@ -507,33 +507,67 @@
   border-top: 1px solid #e2e8f0;
 }
 
-/* ── PRINT MEDIA QUERY ── */
+/* ── PRINT MEDIA QUERY FOR FLAWLESS A4 PDF EXPORTS ── */
+@page {
+  size: A4 portrait;
+  margin: 10mm 12mm;
+}
+
 @media print {
+  html, body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-size: 12px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   body * {
     visibility: hidden;
   }
+
   .invoice-modal-backdrop {
-    position: static;
-    background: transparent;
-    padding: 0;
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    display: block !important;
   }
+
   .invoice-modal-card {
-    box-shadow: none;
-    max-width: 100%;
-    max-height: none;
-    border-radius: 0;
+    box-shadow: none !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    border-radius: 0 !important;
+    border: none !important;
+    overflow: visible !important;
   }
+
   #printable-invoice-doc, #printable-invoice-doc * {
-    visibility: visible;
+    visibility: visible !important;
   }
+
   #printable-invoice-doc {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    padding: 0;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
   }
+
+  .invoice-info-grid,
+  .invoice-table-wrapper,
+  .invoice-summary-section,
+  .invoice-footer-status {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
   .no-print {
     display: none !important;
   }
 }
+

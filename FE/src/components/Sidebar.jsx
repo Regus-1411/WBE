@@ -199,14 +199,14 @@ function Sidebar({ collapsed, onToggle }) {
       </button>
 
       {/* Brand */}
-      <div className="sidebar__brand">
+      <div className="sidebar__brand notranslate" translate="no">
         <div className="sidebar__brand-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 2c0 0-8 9.27-8 13a8 8 0 0 0 16 0C20 11.27 12 2 12 2z" />
           </svg>
         </div>
         {!collapsed && (
-          <span className="sidebar__brand-text">
+          <span className="sidebar__brand-text notranslate" translate="no">
             DR<span className="sidebar__brand-accent">OP</span>
           </span>
         )}
@@ -215,9 +215,9 @@ function Sidebar({ collapsed, onToggle }) {
       {/* User badge */}
       {!collapsed && (
         <div className="sidebar__admin-badge" id="user-badge">
-          <div className="sidebar__admin-avatar">{getInitials(displayName)}</div>
+          <div className="sidebar__admin-avatar notranslate" translate="no">{getInitials(displayName)}</div>
           <div className="sidebar__admin-info">
-            <span className="sidebar__admin-name" title={displayName}>{displayName}</span>
+            <span className="sidebar__admin-name notranslate" title={displayName} translate="no">{displayName}</span>
             <span className="sidebar__admin-role" title={displayRole}>{displayRole}</span>
           </div>
         </div>

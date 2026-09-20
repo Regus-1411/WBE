@@ -748,47 +748,728 @@
   transition: all 0.15s ease;
 }
 
-.res-modal__method-opt:hover {
-  border-color: var(--blue-400);
-  background: var(--blue-50);
+/* ══════════════════════════════════════════════════════════════════
+   SIMPLE RAZORPAY PAYMENT GATEWAY & SIGNATURE ANIMATIONS
+   ══════════════════════════════════════════════════════════════════ */
+
+.razorpay-gateway-modal {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(12, 35, 64, 0.35);
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
 }
 
-.res-modal__footer {
+/* ── Top Header Brand Bar ── */
+.razorpay-modal__header {
+  background: #0c2340;
+  padding: 12px 18px;
   display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
+  justify-content: space-between;
+  align-items: center;
+  color: #ffffff;
 }
 
-.res-modal__success {
-  padding: 2.5rem 1.5rem;
-  text-align: center;
+.razorpay-brand-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.res-modal__success-icon {
-  width: 56px;
-  height: 56px;
-  background: var(--emerald-50);
-  color: var(--emerald-600);
-  font-size: 1.75rem;
-  font-weight: 800;
-  border-radius: 50%;
+.razorpay-logo-badge {
+  background: #ffffff;
+  border-radius: 6px;
+  padding: 2px 8px;
+  display: flex;
+  align-items: center;
+  font-size: 1rem;
+}
+
+.rzp-text-bold {
+  color: #0c2340;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+
+.rzp-text-blue {
+  color: #3395ff;
+  font-weight: 900;
+}
+
+.razorpay-badge-sub {
+  font-size: 0.72rem;
+  color: #93c5fd;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.razorpay-close-btn {
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  border-radius: 6px;
+  color: #cbd5e1;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 1rem;
-  border: 1px solid var(--emerald-100);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.res-modal__success h3 {
-  font-family: var(--font-heading);
+.razorpay-close-btn:hover:not(:disabled) {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+/* ── Order Strip ── */
+.razorpay-order-strip {
+  background: linear-gradient(135deg, #0c2340 0%, #1e293b 100%);
+  padding: 14px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.razorpay-order-label {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  margin-bottom: 2px;
+}
+
+.razorpay-order-amount {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin: 0;
+  color: #38bdf8;
+  letter-spacing: -0.02em;
+}
+
+.razorpay-order-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.razorpay-inv-pill {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-family: ui-monospace, monospace;
+  color: #f8fafc;
+}
+
+.razorpay-unit-pill {
+  font-size: 0.75rem;
+  color: #cbd5e1;
+  font-weight: 600;
+}
+
+/* ── Modal Body & 2-Option Tabs ── */
+.razorpay-modal__body {
+  padding: 16px 20px 20px;
+}
+
+.razorpay-tabs-nav {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.razorpay-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.razorpay-tab-btn:hover {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.razorpay-tab-btn--active {
+  border-color: #2563eb !important;
+  background: #eff6ff !important;
+  box-shadow: 0 0 0 1px #2563eb;
+}
+
+.razorpay-tab-icon {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.razorpay-tab-text strong {
+  display: block;
+  font-size: 0.84rem;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.razorpay-tab-text small {
+  display: block;
+  font-size: 0.68rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+/* ── Panel Styles ── */
+.razorpay-panel {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+/* UPI Subtabs */
+.razorpay-upi-type-selector {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.razorpay-upi-subtab {
+  flex: 1;
+  padding: 7px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.razorpay-upi-subtab--active {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+}
+
+/* QR Code Box */
+.razorpay-qr-container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.razorpay-qr-box {
+  position: relative;
+  width: 105px;
+  height: 105px;
+  padding: 6px;
+  background: #ffffff;
+  border: 1.5px solid #0c2340;
+  border-radius: 8px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.razorpay-qr-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.razorpay-qr-scan-line {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #2563eb, #38bdf8, transparent);
+  box-shadow: 0 0 8px #2563eb;
+  animation: qrScan 2.2s infinite ease-in-out;
+  pointer-events: none;
+}
+
+@keyframes qrScan {
+  0% { top: 4px; opacity: 0; }
+  15% { opacity: 1; }
+  50% { top: 96px; opacity: 1; }
+  85% { opacity: 1; }
+  100% { top: 4px; opacity: 0; }
+}
+
+.razorpay-qr-desc p {
+  font-size: 0.8125rem;
+  color: #334155;
+  margin: 0 0 6px;
+  line-height: 1.4;
+}
+
+.razorpay-vpa-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-family: ui-monospace, monospace;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+/* VPA Input */
+.razorpay-vpa-container {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.razorpay-field-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 5px;
+}
+
+.razorpay-vpa-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.razorpay-input {
+  width: 100%;
+  padding: 9px 12px;
+  font-size: 0.84rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #0f172a;
+  background: #ffffff;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.razorpay-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.razorpay-vpa-check {
+  position: absolute;
+  right: 10px;
+  color: #16a34a;
+  font-weight: 800;
+}
+
+.razorpay-quick-vpa-pills {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.razorpay-vpa-pill {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 9999px;
+  padding: 3px 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.razorpay-vpa-pill:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+/* Card Inputs */
+.razorpay-form-group {
+  margin-bottom: 10px;
+}
+
+.razorpay-form-row {
+  display: flex;
+  gap: 10px;
+}
+
+.razorpay-card-icons {
+  display: flex;
+  gap: 4px;
+}
+
+.card-brand-badge {
+  font-size: 0.625rem;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.card-brand-badge--visa {
+  background: #1e40af;
+  color: #ffffff;
+}
+
+.card-brand-badge--mc {
+  background: #ea580c;
+  color: #ffffff;
+}
+
+.card-brand-badge--rupay {
+  background: #16a34a;
+  color: #ffffff;
+}
+
+/* Footer & Pay Button */
+.razorpay-modal__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.razorpay-ssl-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.razorpay-pay-btn {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  color: #ffffff !important;
+  font-size: 0.9rem !important;
+  font-weight: 800 !important;
+  padding: 10px 22px !important;
+  border-radius: 10px !important;
+  border: none !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4) !important;
+  transition: all 0.15s ease !important;
+}
+
+.razorpay-pay-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.5) !important;
+}
+
+.razorpay-arrow-right {
+  font-size: 1.1rem;
+  transition: transform 0.15s ease;
+}
+
+.razorpay-pay-btn:hover .razorpay-arrow-right {
+  transform: translateX(3px);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   CLASSIC RAZORPAY PROCESSING ANIMATION (ROTATING DUAL ARC & GLYPH)
+   ══════════════════════════════════════════════════════════════════ */
+
+.razorpay-classic-processing {
+  padding: 3rem 1.5rem 2rem;
+  text-align: center;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.razorpay-spinner-container {
+  position: relative;
+  width: 84px;
+  height: 84px;
+  margin: 0 auto 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Classic Razorpay Dual Ring Loader */
+.razorpay-spinner-track {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 3.5px solid #e2e8f0;
+  border-top-color: #3395ff;
+  border-right-color: #2563eb;
+  animation: rzpClassicSpin 0.9s infinite cubic-bezier(0.5, 0.1, 0.5, 0.9);
+}
+
+@keyframes rzpClassicSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.razorpay-spinner-glow {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(51, 149, 255, 0.2) 0%, transparent 70%);
+  animation: rzpGlowPulse 1.8s infinite ease-in-out;
+}
+
+@keyframes rzpGlowPulse {
+  0%, 100% { transform: scale(0.9); opacity: 0.5; }
+  50% { transform: scale(1.15); opacity: 1; }
+}
+
+.razorpay-spinner-center-logo {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1.5px solid #dbeafe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+  animation: rzpLogoPop 1.8s infinite ease-in-out;
+}
+
+.razorpay-glyph-svg {
+  width: 24px;
+  height: 24px;
+}
+
+@keyframes rzpLogoPop {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+.razorpay-processing-main-title {
   font-size: 1.25rem;
   font-weight: 800;
-  color: var(--gray-900);
-  margin: 0 0 0.5rem;
+  color: #0c2340;
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
 }
 
-.res-modal__success p {
-  font-size: 0.875rem;
-  color: var(--gray-500);
-  margin: 0;
+.razorpay-processing-sub-text {
+  font-size: 0.84rem;
+  color: #64748b;
+  margin: 0 0 1.25rem;
 }
+
+.razorpay-processing-sub-text strong {
+  color: #0f172a;
+}
+
+/* Classic Pulsing 3-Dots */
+.razorpay-loading-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 2rem;
+}
+
+.razorpay-loading-dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3395ff;
+  animation: rzpDotJump 1.2s infinite ease-in-out both;
+}
+
+.razorpay-loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+.razorpay-loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes rzpDotJump {
+  0%, 80%, 100% { transform: scale(0.4); opacity: 0.4; }
+  40% { transform: scale(1.1); opacity: 1; background: #2563eb; }
+}
+
+.razorpay-security-footnote {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  color: #64748b;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 6px 14px;
+  border-radius: 9999px;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   CLASSIC RAZORPAY SUCCESS ANIMATION (GREEN POP & DRAW CHECKMARK)
+   ══════════════════════════════════════════════════════════════════ */
+
+.razorpay-classic-success {
+  padding: 2.4rem 1.5rem 1.8rem;
+  text-align: center;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.razorpay-success-badge-container {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.razorpay-success-ripple {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.2);
+  animation: rzpSuccessRipple 1.6s infinite ease-out;
+}
+
+@keyframes rzpSuccessRipple {
+  0% { transform: scale(0.85); opacity: 0.8; }
+  100% { transform: scale(1.65); opacity: 0; }
+}
+
+.razorpay-success-circle {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #10b981;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.35);
+  animation: rzpSuccessPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+
+@keyframes rzpSuccessPop {
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.razorpay-success-check-svg {
+  width: 48px;
+  height: 48px;
+}
+
+.razorpay-success-circle-outline {
+  stroke: rgba(255, 255, 255, 0.3);
+  stroke-width: 2;
+}
+
+.razorpay-success-check-path {
+  stroke: #ffffff;
+  stroke-width: 4.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: rzpCheckDraw 0.45s cubic-bezier(0.65, 0, 0.45, 1) forwards 0.25s;
+}
+
+@keyframes rzpCheckDraw {
+  100% { stroke-dashoffset: 0; }
+}
+
+.razorpay-success-heading {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0c2340;
+  margin: 0 0 6px;
+  letter-spacing: -0.02em;
+}
+
+.razorpay-success-amount-display {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #10b981;
+  letter-spacing: -0.03em;
+  margin-bottom: 4px;
+}
+
+.razorpay-success-paid-to {
+  font-size: 0.8125rem;
+  color: #64748b;
+  margin: 0 0 1.5rem;
+}
+
+.razorpay-success-paid-to strong {
+  color: #1e293b;
+}
+
+/* Classic Razorpay Receipt Table Card */
+.razorpay-classic-receipt {
+  width: 100%;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.razorpay-receipt-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8125rem;
+}
+
+.rzp-lbl {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.rzp-val {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.rzp-val code {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  color: #0c2340;
+}
+
+.rzp-val--success {
+  color: #16a34a;
+}
+
+.razorpay-success-footer-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  justify-content: center;
+}
+
+
+

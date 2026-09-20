@@ -32,21 +32,17 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // Enable CORS with our config
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            // Disable CSRF (stateless JWT, no sessions)
             .csrf(csrf -> csrf.disable())
-            // Stateless session — no server-side session
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
-            // Authorization rules
             .authorizeHttpRequests(auth -> auth
-                // Public endpoints — no token needed
                 .requestMatchers("/api/auth/**").permitAll()
-
-                // Admin-only write operations
+                .requestMatchers("/api/ai/**").permitAll()
+                .requestMatchers("/api/admin/notifications/**").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("APARTMENT_ADMIN")
+
                 .requestMatchers(HttpMethod.POST, "/api/apartments/**").hasRole("APARTMENT_ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/apartments/**").hasRole("APARTMENT_ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/apartments/**").hasRole("APARTMENT_ADMIN")
@@ -54,11 +50,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/households/**").hasRole("APARTMENT_ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/households/**").hasRole("APARTMENT_ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/water-usage/**").hasRole("APARTMENT_ADMIN")
-
-                // Everything else requires authentication
                 .anyRequest().authenticated()
             )
-            // Register JWT filter before Spring's default auth filter
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

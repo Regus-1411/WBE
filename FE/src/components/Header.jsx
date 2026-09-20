@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import LanguageSelector from "./LanguageSelector";
 import "./Header.css";
 
 function Header() {
@@ -40,17 +41,17 @@ function Header() {
               <span>Back to Home</span>
             </Link>
           ) : (
-            <Link to="/" className="header__brand" id="header-brand">
+            <Link to="/" className="header__brand notranslate" id="header-brand" translate="no">
               <div className="header__logo-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
                 </svg>
               </div>
-              <div className="header__brand-text-col">
-                <span className="header__title">
+              <div className="header__brand-text-col notranslate" translate="no">
+                <span className="header__title notranslate" translate="no">
                   DR<span className="header__title-accent">OP</span>
                 </span>
-                <span className="header__subtitle">Smart Water</span>
+                <span className="header__subtitle notranslate" translate="no">Smart Water</span>
               </div>
             </Link>
           )}
@@ -77,6 +78,9 @@ function Header() {
             
             {/* Mobile-only action buttons */}
             <div className="header__mobile-actions">
+              <div style={{ marginBottom: "0.5rem" }}>
+                <LanguageSelector id="mobile-header-language-selector" />
+              </div>
               <Link to="/login" className="header__mobile-login-btn">
                 Sign In (Resident / Admin)
               </Link>
@@ -98,8 +102,11 @@ function Header() {
           </Link>
         )}
 
-        {/* Right Actions */}
+        {/* Right Actions with Multi-Language Switcher */}
         <div className="header__actions">
+          {/* Universal Language Switcher placed on the right of top bar */}
+          <LanguageSelector id="header-language-selector" />
+
           {isLanding ? (
             <>
               <Link to="/login" className="header__login-link" id="header-login-btn">

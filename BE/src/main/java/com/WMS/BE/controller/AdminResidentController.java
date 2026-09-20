@@ -56,4 +56,3 @@ public class AdminResidentController {
         return ResponseEntity.ok(ApiResponse.success(msg, available));
     }
 }
-

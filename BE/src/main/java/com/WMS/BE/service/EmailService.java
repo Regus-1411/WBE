@@ -15,6 +15,47 @@ public interface EmailService {
     );
 
     /**
+     * Asynchronously sends monthly water bill invoice notification.
+     */
+    void sendBillNotification(
+            String toEmail,
+            String residentName,
+            String unitNumber,
+            String invoiceNumber,
+            String period,
+            double consumptionKL,
+            double totalAmount,
+            String dueDate,
+            String apartmentName
+    );
+
+    /**
+     * Asynchronously sends payment overdue / due date reminder.
+     */
+    void sendPaymentReminder(
+            String toEmail,
+            String residentName,
+            String unitNumber,
+            String invoiceNumber,
+            String period,
+            double totalAmount,
+            String dueDate,
+            String apartmentName
+    );
+
+    /**
+     * Asynchronously sends abnormal water consumption or leak anomaly alert.
+     */
+    void sendLeakAlert(
+            String toEmail,
+            String residentName,
+            String unitNumber,
+            String severity,
+            String description,
+            String apartmentName
+    );
+
+    /**
      * Asynchronously sends password reset notification.
      */
     void sendPasswordResetEmail(String toEmail, String fullName, String resetToken);
@@ -23,4 +64,9 @@ public interface EmailService {
      * Asynchronously sends general society announcement or notification.
      */
     void sendCustomNotification(String toEmail, String subject, String bodyHtml);
+
+    /**
+     * Synchronously sends a test diagnostic email to verify SMTP credentials and network connectivity.
+     */
+    boolean sendTestEmail(String toEmail);
 }

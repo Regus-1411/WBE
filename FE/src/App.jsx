@@ -2,6 +2,7 @@ import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import Header from "./components/Header";
 import DashboardLayout from "./components/DashboardLayout";
+import AIChatbot from "./components/AIChatbot";
 
 // Public Pages
 import LandingPage from "./pages/LandingPage";
@@ -63,6 +64,9 @@ function AppContent() {
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
+
+      {/* Global AI Chatbot with Page-Specific Scope and Backend Integration */}
+      <AIChatbot />
     </>
   );
 }

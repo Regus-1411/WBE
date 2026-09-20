@@ -50,6 +50,18 @@ function ReadingsPage() {
     }
   };
 
+  const handleGenerateBillForReading = (readingId) => {
+    try {
+      const bill = dataStore.generateBillForReading(readingId);
+      loadData();
+      setNotification(`✓ Generated Invoice #${bill.invoiceNumber || bill.id} for Unit ${bill.unitNumber} (${bill.amount})!`);
+      setTimeout(() => setNotification(""), 4500);
+    } catch (err) {
+      setNotification(`❌ Duplicate / Billing Error: ${err.message}`);
+      setTimeout(() => setNotification(""), 4500);
+    }
+  };
+
   // Pagination slicing
   const startIndex = (currentPage - 1) * pageSize;
   const paginatedReadings = readings.slice(startIndex, startIndex + pageSize);
@@ -59,7 +71,7 @@ function ReadingsPage() {
       <div className="admin-page__header">
         <div>
           <h1 className="admin-page__title">Meter Readings & Water Usage</h1>
-          <p className="admin-page__subtitle">Record meter readings for flats and track live household consumption</p>
+          <p className="admin-page__subtitle">Record meter readings for flats, track consumption, and issue verified single or batch bills</p>
         </div>
       </div>
 
@@ -73,6 +85,7 @@ function ReadingsPage() {
       <div className="admin-card input-creation-card">
         <div className="input-creation-header">
           <h2>⚡ Log Meter Reading for Flat</h2>
+          <span style={{ fontSize: "0.78rem", color: "#64748b" }}>Readings are audited and eligible for single-click billing</span>
         </div>
 
         {households.length === 0 ? (
@@ -141,9 +154,14 @@ function ReadingsPage() {
 
       {/* History Table */}
       <div className="admin-card">
-        <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h2 style={{ fontSize: "1.05rem", margin: 0 }}>Reading History</h2>
-          <span style={{ fontSize: "0.8125rem", color: "#64748b" }}>{readings.length} total entries</span>
+        <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+          <div>
+            <h2 style={{ fontSize: "1.05rem", margin: "0 0 2px" }}>Reading History & Billing Ledger</h2>
+            <span style={{ fontSize: "0.78rem", color: "#64748b" }}>Each logged reading can only be billed once to prevent duplicate charges</span>
+          </div>
+          <span style={{ fontSize: "0.8125rem", color: "#64748b", background: "#f1f5f9", padding: "0.25rem 0.65rem", borderRadius: "6px" }}>
+            {readings.length} total entries • {readings.filter((r) => r.isBilled).length} Billed
+          </span>
         </div>
 
         {readings.length === 0 ? (
@@ -162,9 +180,11 @@ function ReadingsPage() {
                   <th>Resident</th>
                   <th>Reading Date</th>
                   <th>Meter Reading</th>
-                  <th>Previous Reading</th>
+                  <th>Previous</th>
                   <th>Consumption</th>
+                  <th>Billing Status</th>
                   <th>Remarks</th>
+                  <th style={{ textAlign: "center" }}>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -174,10 +194,37 @@ function ReadingsPage() {
                     <td><strong>{r.unitNumber}</strong></td>
                     <td>{r.residentName || "—"}</td>
                     <td>{r.date}</td>
-                    <td>{r.meterReading} kL</td>
+                    <td><strong>{r.meterReading} kL</strong></td>
                     <td className="text-muted">{r.previousReading} kL</td>
-                    <td style={{ fontWeight: 700, color: "#0284c7" }}>{r.consumptionLiters.toLocaleString()} Liters</td>
-                    <td>{r.notes}</td>
+                    <td style={{ fontWeight: 700, color: "#0284c7" }}>{r.consumptionLiters.toLocaleString()} L</td>
+                    <td>
+                      {r.isBilled ? (
+                        <span className="badge badge--success" title={`Billed in ${r.billedInvoiceId || "Invoice"}`}>
+                          ✓ Billed ({r.billedInvoiceId ? r.billedInvoiceId.slice(-6) : "Done"})
+                        </span>
+                      ) : (
+                        <span className="badge badge--warning">
+                          ⏳ Unbilled
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ color: "#64748b", fontSize: "0.8125rem" }}>{r.notes}</td>
+                    <td style={{ textAlign: "center" }}>
+                      {r.isBilled ? (
+                        <span style={{ fontSize: "0.75rem", color: "#16a34a", fontWeight: 600 }}>
+                          Locked (Billed)
+                        </span>
+                      ) : (
+                        <button
+                          className="btn-table-action"
+                          onClick={() => handleGenerateBillForReading(r.id)}
+                          style={{ fontSize: "0.75rem", padding: "0.25rem 0.6rem", color: "#0284c7", borderColor: "#bae6fd", background: "#f0f9ff" }}
+                          title="Generate single invoice for this unbilled reading"
+                        >
+                          ⚡ Issue Bill
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -10,7 +10,6 @@ const STORAGE_KEYS = {
   BULK_PURCHASES: "drop_bulk_purchases_data",
 };
 
-// Helper to get from localStorage
 function getLocal(key, fallback = []) {
   try {
     const saved = localStorage.getItem(key);
@@ -20,7 +19,6 @@ function getLocal(key, fallback = []) {
   }
 }
 
-// Helper to set to localStorage
 function setLocal(key, value) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
@@ -283,6 +281,9 @@ export const dataStore = {
       consumptionLiters: consumptionLiters > 0 ? consumptionLiters : 0,
       source: data.source || "MANUAL",
       notes: data.notes || "Standard reading",
+      isBilled: false,
+      billedInvoiceId: null,
+      billedCycle: null,
       createdAt: new Date().toISOString(),
     };
 
@@ -511,6 +512,7 @@ export const dataStore = {
     };
   },
 
+  // ── DUPLICATE-PROTECTED BATCH BILL GENERATION ──
   generateBillsForCycle: (billingMonth = "September 2026", tariffPlanId = null, overrideFixed = null) => {
     const households = dataStore.getHouseholds();
     const readings = dataStore.getReadings();
@@ -531,18 +533,40 @@ export const dataStore = {
     }
 
     const todayStr = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+    const targetPeriod = (billingMonth || "September 2026").trim();
 
-    const newGenerated = households.map((h) => {
-      const unitReadings = readings.filter((r) => r.unitNumber === h.unitNumber);
-      const latestReading = unitReadings[0];
+    // 1. Check existing bills to strictly prevent duplicate bills for the same household in this cycle
+    const alreadyBilledUnitMap = new Set();
+    existingBills.forEach((b) => {
+      const bPeriod = (b.period || "").trim().toLowerCase();
+      if (bPeriod === targetPeriod.toLowerCase()) {
+        if (b.unitNumber) alreadyBilledUnitMap.add(b.unitNumber.toLowerCase().trim());
+        if (b.householdId) alreadyBilledUnitMap.add(String(b.householdId));
+      }
+    });
+
+    const unbilledHouseholds = households.filter((h) => {
+      const unitKey = (h.unitNumber || "").toLowerCase().trim();
+      const idKey = String(h.id);
+      return !alreadyBilledUnitMap.has(unitKey) && !alreadyBilledUnitMap.has(idKey);
+    });
+
+    const newGenerated = [];
+    let updatedReadings = [...readings];
+
+    unbilledHouseholds.forEach((h) => {
+      // Find latest reading for this unit
+      const readingIdx = updatedReadings.findIndex((r) => r.unitNumber === h.unitNumber);
+      const latestReading = readingIdx >= 0 ? updatedReadings[readingIdx] : null;
+
       const liters = latestReading ? Number(latestReading.consumptionLiters) || 0 : 0;
       const prevReading = latestReading ? latestReading.previousReading : "0.00";
       const currReading = latestReading ? latestReading.meterReading : (prevReading || "0.00");
 
-      return dataStore.createBillObject({
+      const billObj = dataStore.createBillObject({
         household: h,
         liters,
-        period: billingMonth,
+        period: targetPeriod,
         billDate: todayStr,
         dueDate: "20th of month",
         previousReading: prevReading,
@@ -550,11 +574,92 @@ export const dataStore = {
         plan: effectivePlan,
         status: "Unpaid",
       });
+
+      // Mark the reading as billed so it cannot be billed again
+      if (latestReading && readingIdx >= 0) {
+        updatedReadings[readingIdx] = {
+          ...latestReading,
+          isBilled: true,
+          billedInvoiceId: billObj.id,
+          billedCycle: targetPeriod,
+        };
+      }
+
+      newGenerated.push(billObj);
     });
 
-    const updated = [...newGenerated, ...existingBills];
-    setLocal(STORAGE_KEYS.BILLS, updated);
-    return newGenerated;
+    if (newGenerated.length > 0) {
+      const updatedBills = [...newGenerated, ...existingBills];
+      setLocal(STORAGE_KEYS.BILLS, updatedBills);
+      setLocal(STORAGE_KEYS.READINGS, updatedReadings);
+    }
+
+    return {
+      generated: newGenerated,
+      generatedCount: newGenerated.length,
+      skippedCount: households.length - newGenerated.length,
+      totalHouseholds: households.length,
+      alreadyBilledCount: households.length - unbilledHouseholds.length,
+      period: targetPeriod,
+    };
+  },
+
+  // ── SINGLE READING BILL GENERATION WITH DUPLICATE CHECK ──
+  generateBillForReading: (readingId, tariffPlanId = null, overrideFixed = null) => {
+    const readings = dataStore.getReadings();
+    const reading = readings.find((r) => String(r.id) === String(readingId));
+    if (!reading) {
+      throw new Error("Meter reading not found.");
+    }
+    if (reading.isBilled) {
+      throw new Error(`This meter reading was already billed under Invoice #${reading.billedInvoiceId || "INV"}.`);
+    }
+
+    const households = dataStore.getHouseholds();
+    const household = households.find((h) => h.unitNumber === reading.unitNumber || String(h.id) === String(reading.householdId)) || {
+      id: reading.householdId || Date.now(),
+      unitNumber: reading.unitNumber,
+      residentName: reading.residentName || "Resident",
+    };
+
+    const cycleName = reading.date ? new Date(reading.date).toLocaleDateString("en-IN", { month: "long", year: "numeric" }) : "Current Cycle";
+    
+    // Check if an existing bill already covers this unit in this cycle
+    const existingBills = dataStore.getBills();
+    const duplicate = existingBills.find((b) => b.unitNumber === household.unitNumber && b.period?.toLowerCase() === cycleName.toLowerCase());
+    if (duplicate) {
+      throw new Error(`A bill (${duplicate.invoiceNumber || duplicate.id}) already exists for Unit ${household.unitNumber} in ${cycleName}.`);
+    }
+
+    let selectedPlan = tariffPlanId ? dataStore.getTariffPlanById(tariffPlanId) : null;
+    if (!selectedPlan) {
+      const plans = dataStore.getTariffPlans();
+      selectedPlan = plans.find((p) => p.isDefault) || plans[0];
+    }
+    let effectivePlan = { ...selectedPlan };
+    if (overrideFixed !== null && overrideFixed !== undefined && overrideFixed !== "") {
+      effectivePlan.fixedCharge = Number(overrideFixed);
+    }
+
+    const todayStr = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+    const billObj = dataStore.createBillObject({
+      household,
+      liters: Number(reading.consumptionLiters) || 0,
+      period: cycleName,
+      billDate: todayStr,
+      dueDate: "20th of month",
+      previousReading: reading.previousReading || "0.00",
+      currentReading: reading.meterReading || "0.00",
+      plan: effectivePlan,
+      status: "Unpaid",
+    });
+
+    const updatedReadings = readings.map((r) => (String(r.id) === String(readingId) ? { ...r, isBilled: true, billedInvoiceId: billObj.id, billedCycle: cycleName } : r));
+    const updatedBills = [billObj, ...existingBills];
+
+    setLocal(STORAGE_KEYS.BILLS, updatedBills);
+    setLocal(STORAGE_KEYS.READINGS, updatedReadings);
+    return billObj;
   },
 
   getBillById: (billId) => {
@@ -562,15 +667,19 @@ export const dataStore = {
     return bills.find((b) => String(b.id) === String(billId) || String(b.invoiceNumber) === String(billId));
   },
 
-  markBillPaid: (billId, paymentMethod = "UPI") => {
+  markBillPaid: (billId, paymentMethod = "Razorpay", details = {}) => {
     const bills = dataStore.getBills();
     const updated = bills.map((b) =>
       String(b.id) === String(billId) || String(b.invoiceNumber) === String(billId)
         ? {
             ...b,
             status: "Paid",
-            paidAt: new Date().toISOString(),
-            paymentMethod,
+            paidAt: details.paidAt || new Date().toISOString(),
+            paymentMethod: paymentMethod || "Razorpay",
+            razorpayPaymentId: details.razorpayPaymentId || details.transactionId || `pay_rzp_${Date.now()}`,
+            razorpayOrderId: details.razorpayOrderId || `order_rzp_${Date.now()}`,
+            transactionId: details.transactionId || details.razorpayPaymentId || `pay_rzp_${Date.now()}`,
+            ...details,
           }
         : b
     );

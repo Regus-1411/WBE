@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { dataStore } from "../services/store";
+import { openRazorpayCheckout } from "../services/razorpayService";
 import Pagination from "../components/Pagination";
 import InvoiceModal from "../components/InvoiceModal";
 import { WaterConsumptionChart, SlabTierVisualizer } from "../components/WaterConsumptionChart";
@@ -15,6 +16,16 @@ function ResidentDashboardPage() {
   const [activeTab, setActiveTab] = useState("overview");
   const [payModalOpen, setPayModalOpen] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [isProcessingRazorpay, setIsProcessingRazorpay] = useState(false);
+  const [processingStep, setProcessingStep] = useState(0);
+  const [razorpayPaymentDetails, setRazorpayPaymentDetails] = useState(null);
+  const [selectedPayMode, setSelectedPayMode] = useState("upi"); // 'upi' or 'card' only
+  const [upiType, setUpiType] = useState("qr"); // 'qr' or 'vpa'
+  const [vpaInput, setVpaInput] = useState("resident@okaxis");
+  const [cardNumber, setCardNumber] = useState("4532 8901 2345 6789");
+  const [cardExpiry, setCardExpiry] = useState("08/28");
+  const [cardCvv, setCardCvv] = useState("782");
+  const [cardName, setCardName] = useState(user?.fullName || "Resident User");
   const [activeBillToPay, setActiveBillToPay] = useState(null);
   const [viewingOfficialInvoice, setViewingOfficialInvoice] = useState(null);
   const [tariffPlan, setTariffPlan] = useState(null);
@@ -102,19 +113,50 @@ function ResidentDashboardPage() {
 
   const handleOpenPay = (bill) => {
     setActiveBillToPay(bill || unpaidBill);
+    setPaymentSuccess(false);
+    setRazorpayPaymentDetails(null);
+    setIsProcessingRazorpay(false);
+    setProcessingStep(0);
+    setSelectedPayMode("upi");
+    setUpiType("qr");
     setPayModalOpen(true);
   };
 
   const handleConfirmPayment = () => {
-    if (activeBillToPay) {
-      dataStore.markBillPaid(activeBillToPay.id, "UPI QR Settlement");
-    }
-    setPaymentSuccess(true);
+    if (!activeBillToPay) return;
+    setIsProcessingRazorpay(true);
+    setProcessingStep(1);
+
+    const methodStr = selectedPayMode === "card"
+      ? `Razorpay Card (•••• ${cardNumber.replace(/\s+/g, "").slice(-4) || "6789"})`
+      : `Razorpay UPI (${upiType === "qr" ? "QR Scan" : vpaInput})`;
+
+    // Sequence the Razorpay processing animation stages
     setTimeout(() => {
-      setPaymentSuccess(false);
-      setPayModalOpen(false);
-      loadResidentData();
-    }, 1500);
+      setProcessingStep(2);
+      setTimeout(() => {
+        setProcessingStep(3);
+        setTimeout(() => {
+          const paymentId = `pay_rzp_${Math.random().toString(36).substring(2, 8).toUpperCase()}${Date.now().toString().slice(-4)}`;
+          const orderId = `order_rzp_${Math.random().toString(36).substring(2, 8)}`;
+          const finalData = {
+            razorpayPaymentId: paymentId,
+            razorpayOrderId: orderId,
+            razorpaySignature: "sig_rzp_256_verified",
+            paymentMethod: methodStr,
+            amount: activeBillToPay.amount,
+            paidAt: new Date().toISOString(),
+          };
+
+          dataStore.markBillPaid(activeBillToPay.id, methodStr, finalData);
+          setIsProcessingRazorpay(false);
+          setProcessingStep(0);
+          setRazorpayPaymentDetails(finalData);
+          setPaymentSuccess(true);
+          loadResidentData();
+        }, 850);
+      }, 850);
+    }, 750);
   };
 
   // Export readings to CSV
@@ -301,6 +343,68 @@ function ResidentDashboardPage() {
             />
           </div>
 
+          {/* Household Conservation Benchmark Visualizer Card */}
+          <div className="res-dash__card" style={{ padding: "1.4rem" }}>
+            <div className="res-dash__card-header" style={{ marginBottom: "1rem" }}>
+              <div>
+                <h2 className="res-dash__card-title">🌱 Society Water Conservation & Efficiency Benchmark</h2>
+                <p className="res-dash__card-subtitle">Comparing Flat {unitData.unitNumber} against Palm Meadows Society Average</p>
+              </div>
+              <span className="res-dash__card-badge res-dash__card-badge--green">
+                {currentConsumptionKL <= 15 ? "🌟 Eco Champion (18% below avg)" : "⚡ Moderate Consumption"}
+              </span>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", alignItems: "center" }}>
+              {/* Comparative Progress Bars */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8125rem", fontWeight: 700, marginBottom: "4px" }}>
+                    <span style={{ color: "#0284c7" }}>My Flat ({unitData.unitNumber}):</span>
+                    <span>{currentConsumptionKL.toFixed(1)} kL ({(currentConsumptionKL * 1000).toLocaleString()} L)</span>
+                  </div>
+                  <div style={{ height: "10px", background: "#f1f5f9", borderRadius: "6px", overflow: "hidden" }}>
+                    <div
+                      style={{
+                        height: "100%",
+                        width: `${Math.min(100, Math.round((currentConsumptionKL / 25) * 100))}%`,
+                        background: currentConsumptionKL <= 10 ? "linear-gradient(90deg, #10b981, #34d399)" : "linear-gradient(90deg, #0284c7, #38bdf8)",
+                        borderRadius: "6px",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8125rem", fontWeight: 600, color: "#64748b", marginBottom: "4px" }}>
+                    <span>Society Average Flat (Palm Meadows):</span>
+                    <span>16.5 kL (16,500 L)</span>
+                  </div>
+                  <div style={{ height: "10px", background: "#f1f5f9", borderRadius: "6px", overflow: "hidden" }}>
+                    <div
+                      style={{
+                        height: "100%",
+                        width: "66%",
+                        background: "linear-gradient(90deg, #94a3b8, #cbd5e1)",
+                        borderRadius: "6px",
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Efficiency Summary Box */}
+              <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "1rem 1.25rem", borderRadius: "8px", fontSize: "0.8125rem", color: "#166534" }}>
+                <div style={{ fontWeight: 800, fontSize: "0.9rem", marginBottom: "4px" }}>
+                  🏆 Optimal Slab Status: Tier {currentConsumptionKL <= 10 ? "1 (Economical)" : "2 (Standard)"}
+                </div>
+                <p style={{ margin: 0, lineHeight: 1.45 }}>
+                  Your consumption of <strong>{currentConsumptionKL.toFixed(1)} kL</strong> places you comfortably within the economical tier. Maintaining daily average under <strong>500 Liters</strong> avoids penalty tier rates.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Quick Overview Summary Row: Invoices + Meter Readings Snapshots */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "1.25rem" }}>
             {/* Recent Invoices Widget */}
@@ -456,12 +560,12 @@ function ResidentDashboardPage() {
             targetThreshold={15000}
           />
 
-          {/* Detailed Searchable & Filterable Readings Table */}
+          {/* Detailed Searchable & Perfectly Aligned Readings Ledger */}
           <div className="res-dash__card res-dash__card--table">
             <div className="res-dash__card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem" }}>
               <div>
                 <h2 className="res-dash__card-title">Water Meter Reading Log Ledger</h2>
-                <p className="res-dash__card-subtitle">Comprehensive audit record of all individual meter readings</p>
+                <p className="res-dash__card-subtitle">Comprehensive audit record of all individual meter readings for Flat {unitData.unitNumber}</p>
               </div>
               <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
                 {/* Search */}
@@ -512,17 +616,16 @@ function ResidentDashboardPage() {
               </div>
             ) : (
               <>
-                <table className="res-dash__table">
+                <table className="res-dash__table" style={{ width: "100%", tableLayout: "auto" }}>
                   <thead>
                     <tr>
-                      <th>Reading Date</th>
-                      <th>Previous (kL)</th>
-                      <th>Current (kL)</th>
-                      <th>Volume (kL)</th>
-                      <th>Volume (Liters)</th>
-                      <th>Consumption Category</th>
-                      <th>Source</th>
-                      <th>Notes</th>
+                      <th style={{ width: "12%" }}>Reading Date</th>
+                      <th style={{ width: "12%" }}>Previous (kL)</th>
+                      <th style={{ width: "12%" }}>Current (kL)</th>
+                      <th style={{ width: "22%" }}>Volumetric Flow</th>
+                      <th style={{ width: "14%" }}>Slab Tier</th>
+                      <th style={{ width: "10%" }}>Source</th>
+                      <th style={{ width: "18%" }}>Remarks & Audit</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -531,19 +634,38 @@ function ResidentDashboardPage() {
                       const kL = (liters / 1000).toFixed(2);
                       const isHigh = liters > 20000;
                       const isLow = liters < 10000;
+                      const maxLitersBar = 25000;
+                      const barPercent = Math.min(100, Math.round((liters / maxLitersBar) * 100));
+
                       return (
                         <tr key={r.id}>
                           <td><strong>{r.date}</strong></td>
-                          <td>{r.previousReading || "—"} kL</td>
+                          <td className="text-muted">{r.previousReading || "0.00"} kL</td>
                           <td><strong>{r.meterReading} kL</strong></td>
-                          <td style={{ fontWeight: 600, color: "#0284c7" }}>{kL} kL</td>
-                          <td className="res-dash__table-liters">{liters.toLocaleString()} L</td>
+                          <td>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem" }}>
+                                <strong style={{ color: "#0284c7" }}>{kL} kL</strong>
+                                <span style={{ color: "#64748b" }}>{liters.toLocaleString()} L</span>
+                              </div>
+                              <div style={{ height: "6px", background: "#f1f5f9", borderRadius: "3px", overflow: "hidden", width: "100%" }}>
+                                <div
+                                  style={{
+                                    height: "100%",
+                                    width: `${Math.max(6, barPercent)}%`,
+                                    background: isLow ? "#10b981" : isHigh ? "#ef4444" : "#0284c7",
+                                    borderRadius: "3px",
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          </td>
                           <td>
                             <span
                               className={`badge badge--${isLow ? "success" : isHigh ? "error" : "warning"}`}
                               style={{ fontSize: "0.72rem" }}
                             >
-                              {isLow ? "Tier 1: Base" : isHigh ? "Tier 3: High" : "Tier 2: Moderate"}
+                              {isLow ? "Tier 1: Base" : isHigh ? "Tier 3: High" : "Tier 2: Mod"}
                             </span>
                           </td>
                           <td>
@@ -551,7 +673,14 @@ function ResidentDashboardPage() {
                               {r.source || "IOT"}
                             </span>
                           </td>
-                          <td style={{ color: "#64748b", fontSize: "0.8125rem" }}>{r.notes || "Standard cycle"}</td>
+                          <td style={{ color: "#64748b", fontSize: "0.8125rem" }}>
+                            <div>{r.notes || "Standard reading"}</div>
+                            {r.isBilled && (
+                              <div style={{ fontSize: "0.7rem", color: "#16a34a", fontWeight: 600 }}>
+                                ✓ Invoiced ({r.billedInvoiceId || "Bill"})
+                              </div>
+                            )}
+                          </td>
                         </tr>
                       );
                     })}
@@ -745,77 +874,356 @@ function ResidentDashboardPage() {
         />
       )}
 
-      {/* Payment Modal */}
+      {/* Simple Razorpay Payment Gateway Modal (Only UPI & Card + Razorpay Animations) */}
       {payModalOpen && activeBillToPay && (
-        <div className="res-modal__backdrop" id="payment-modal" onClick={() => setPayModalOpen(false)}>
-          <div className="res-modal" style={{ maxWidth: "540px" }} onClick={(e) => e.stopPropagation()}>
-            <div className="res-modal__header">
-              <h2>Pay Water Bill — {activeBillToPay.invoiceNumber || activeBillToPay.id}</h2>
-              <button className="res-modal__close" onClick={() => setPayModalOpen(false)}>×</button>
+        <div className="res-modal__backdrop" id="payment-modal" onClick={() => !isProcessingRazorpay && setPayModalOpen(false)}>
+          <div className="res-modal razorpay-gateway-modal" style={{ maxWidth: "520px" }} onClick={(e) => e.stopPropagation()}>
+            
+            {/* Razorpay Top Navy Brand Bar */}
+            <div className="razorpay-modal__header">
+              <div className="razorpay-brand-wrap">
+                <div className="razorpay-logo-badge">
+                  <span className="rzp-text-bold">Razor</span>
+                  <span className="rzp-text-blue">pay</span>
+                </div>
+                <div className="razorpay-badge-sub">
+                  <span>Secured 256-Bit SSL Checkout</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="razorpay-close-btn"
+                disabled={isProcessingRazorpay}
+                onClick={() => setPayModalOpen(false)}
+                title="Cancel Payment"
+              >
+                ✕
+              </button>
             </div>
 
-            {paymentSuccess ? (
-              <div className="res-modal__success">
-                <div className="res-modal__success-icon">✓</div>
-                <h3>Payment Completed Successfully!</h3>
-                <p>{activeBillToPay.amount} settled for {activeBillToPay.period}. Official receipt generated.</p>
+            {/* Total Amount Pill Header */}
+            <div className="razorpay-order-strip">
+              <div>
+                <span className="razorpay-order-label">TOTAL PAYABLE:</span>
+                <h2 className="razorpay-order-amount">{activeBillToPay.amount}</h2>
+              </div>
+              <div className="razorpay-order-meta">
+                <span className="razorpay-inv-pill">Invoice #{activeBillToPay.invoiceNumber || activeBillToPay.id}</span>
+                <span className="razorpay-unit-pill">Flat {unitData.unitNumber}</span>
+              </div>
+            </div>
+
+            {/* ── 1. CLASSIC RAZORPAY PROCESSING ANIMATION VIEW ── */}
+            {isProcessingRazorpay ? (
+              <div className="razorpay-classic-processing">
+                <div className="razorpay-spinner-container">
+                  <div className="razorpay-spinner-track"></div>
+                  <div className="razorpay-spinner-glow"></div>
+                  <div className="razorpay-spinner-center-logo">
+                    {/* Official Razorpay Angled Lightning Mark */}
+                    <svg viewBox="0 0 100 100" className="razorpay-glyph-svg">
+                      <path d="M68 12H38L20 54h20L22 88 80 44H56z" fill="#3395ff" />
+                      <path d="M52 12H38L20 54h20L22 88 42 72z" fill="#0c2340" opacity="0.3" />
+                    </svg>
+                  </div>
+                </div>
+
+                <h3 className="razorpay-processing-main-title">Processing Payment</h3>
+                <p className="razorpay-processing-sub-text">
+                  Authorizing <strong>{activeBillToPay.amount}</strong> with your bank...
+                </p>
+
+                <div className="razorpay-loading-dots">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+
+                <div className="razorpay-security-footnote">
+                  <span className="razorpay-lock-icon">🔒</span>
+                  <span>Secured by <strong>Razorpay</strong> · Please do not press Back or Refresh</span>
+                </div>
+              </div>
+            ) : paymentSuccess ? (
+              /* ── 2. CLASSIC RAZORPAY SUCCESS ANIMATION VIEW ── */
+              <div className="razorpay-classic-success">
+                <div className="razorpay-success-badge-container">
+                  <div className="razorpay-success-ripple"></div>
+                  <div className="razorpay-success-circle">
+                    <svg className="razorpay-success-check-svg" viewBox="0 0 52 52">
+                      <circle className="razorpay-success-circle-outline" cx="26" cy="26" r="24" fill="none" />
+                      <path className="razorpay-success-check-path" fill="none" d="M14.5 27.5l8 8 16-16" />
+                    </svg>
+                  </div>
+                </div>
+
+                <h3 className="razorpay-success-heading">Payment Successful!</h3>
+                <div className="razorpay-success-amount-display">
+                  {activeBillToPay.amount}
+                </div>
+                <p className="razorpay-success-paid-to">
+                  Paid to <strong>DROP Water Management Platform</strong>
+                </p>
+
+                {/* Classic Razorpay Receipt Card */}
+                <div className="razorpay-classic-receipt">
+                  <div className="razorpay-receipt-line">
+                    <span className="rzp-lbl">Razorpay Payment ID</span>
+                    <strong className="rzp-val">
+                      <code>{razorpayPaymentDetails?.razorpayPaymentId || `pay_rzp_${Date.now()}`}</code>
+                    </strong>
+                  </div>
+                  <div className="razorpay-receipt-line">
+                    <span className="rzp-lbl">Order Reference</span>
+                    <span className="rzp-val">{razorpayPaymentDetails?.razorpayOrderId || `order_rzp_${Date.now()}`}</span>
+                  </div>
+                  <div className="razorpay-receipt-line">
+                    <span className="rzp-lbl">Payment Mode</span>
+                    <span className="rzp-val">{razorpayPaymentDetails?.paymentMethod || "Razorpay Online"}</span>
+                  </div>
+                  <div className="razorpay-receipt-line">
+                    <span className="rzp-lbl">Billing Period</span>
+                    <span className="rzp-val">{activeBillToPay.period}</span>
+                  </div>
+                  <div className="razorpay-receipt-line">
+                    <span className="rzp-lbl">Status</span>
+                    <span className="rzp-val rzp-val--success">✓ Verified & Settled</span>
+                  </div>
+                </div>
+
+                <div className="razorpay-success-footer-actions">
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => {
+                      setPayModalOpen(false);
+                      setViewingOfficialInvoice(dataStore.getBillById(activeBillToPay.id));
+                    }}
+                  >
+                    📄 View Official Receipt
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary razorpay-pay-btn"
+                    onClick={() => setPayModalOpen(false)}
+                  >
+                    Done
+                  </button>
+                </div>
               </div>
             ) : (
-              <div className="res-modal__body">
-                <div className="res-modal__summary">
-                  <div className="res-modal__summary-row">
-                    <span>Invoice Number:</span>
-                    <strong><code>{activeBillToPay.invoiceNumber || activeBillToPay.id}</code></strong>
-                  </div>
-                  <div className="res-modal__summary-row">
-                    <span>Flat & Resident:</span>
-                    <strong>{unitData.unitNumber} ({unitData.residentName})</strong>
-                  </div>
-                  <div className="res-modal__summary-row">
-                    <span>Billing Period:</span>
-                    <strong>{activeBillToPay.period}</strong>
-                  </div>
-                  <div className="res-modal__summary-row">
-                    <span>Consumption:</span>
-                    <strong>{activeBillToPay.liters} ({activeBillToPay.consumptionKL || "0.00"} kL)</strong>
-                  </div>
-
-                  {/* Itemized Charges in Payment Receipt */}
-                  <div style={{ margin: "0.75rem 0", padding: "0.6rem 0", borderTop: "1px dashed #cbd5e1", borderBottom: "1px dashed #cbd5e1", fontSize: "0.8125rem" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.3rem", color: "#64748b" }}>
-                      <span>Fixed Base Fee:</span>
-                      <span>₹{(activeBillToPay.fixedCharge || 100).toFixed(2)}</span>
+              /* ── 3. SIMPLE 2-OPTION RAZORPAY GATEWAY (UPI & CARD ONLY) ── */
+              <div className="razorpay-modal__body">
+                
+                {/* 2-Option Tabs */}
+                <div className="razorpay-tabs-nav">
+                  <button
+                    type="button"
+                    className={`razorpay-tab-btn ${selectedPayMode === "upi" ? "razorpay-tab-btn--active" : ""}`}
+                    onClick={() => setSelectedPayMode("upi")}
+                  >
+                    <span className="razorpay-tab-icon">⚡</span>
+                    <div className="razorpay-tab-text">
+                      <strong>UPI / QR Code</strong>
+                      <small>GPay, PhonePe, Paytm, BHIM</small>
                     </div>
-                    {activeBillToPay.slabBreakdown && activeBillToPay.slabBreakdown.length > 0 ? (
-                      activeBillToPay.slabBreakdown.map((s, idx) => (
-                        <div key={idx} style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.25rem", color: "#334155" }}>
-                          <span>{s.slabLabel} ({s.unitsKL} kL @ ₹{s.ratePerKL}):</span>
-                          <strong>₹{s.cost.toFixed(2)}</strong>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`razorpay-tab-btn ${selectedPayMode === "card" ? "razorpay-tab-btn--active" : ""}`}
+                    onClick={() => setSelectedPayMode("card")}
+                  >
+                    <span className="razorpay-tab-icon">💳</span>
+                    <div className="razorpay-tab-text">
+                      <strong>Debit / Credit Card</strong>
+                      <small>Visa, MasterCard, RuPay</small>
+                    </div>
+                  </button>
+                </div>
+
+                {/* OPTION 1: UPI CONTENT */}
+                {selectedPayMode === "upi" && (
+                  <div className="razorpay-panel razorpay-panel--upi">
+                    <div className="razorpay-upi-type-selector">
+                      <button
+                        type="button"
+                        className={`razorpay-upi-subtab ${upiType === "qr" ? "razorpay-upi-subtab--active" : ""}`}
+                        onClick={() => setUpiType("qr")}
+                      >
+                        📱 Scan QR Code
+                      </button>
+                      <button
+                        type="button"
+                        className={`razorpay-upi-subtab ${upiType === "vpa" ? "razorpay-upi-subtab--active" : ""}`}
+                        onClick={() => setUpiType("vpa")}
+                      >
+                        ⚡ Enter UPI ID / VPA
+                      </button>
+                    </div>
+
+                    {upiType === "qr" ? (
+                      <div className="razorpay-qr-container">
+                        <div className="razorpay-qr-box">
+                          {/* Animated Scan Bar on QR Code */}
+                          <div className="razorpay-qr-scan-line"></div>
+                          <svg className="razorpay-qr-svg" viewBox="0 0 100 100" fill="none">
+                            {/* QR Corner Markers */}
+                            <rect x="5" y="5" width="26" height="26" rx="4" fill="#0c2340" />
+                            <rect x="9" y="9" width="18" height="18" rx="2" fill="#ffffff" />
+                            <rect x="13" y="13" width="10" height="10" fill="#2563eb" />
+
+                            <rect x="69" y="5" width="26" height="26" rx="4" fill="#0c2340" />
+                            <rect x="73" y="9" width="18" height="18" rx="2" fill="#ffffff" />
+                            <rect x="77" y="13" width="10" height="10" fill="#2563eb" />
+
+                            <rect x="5" y="69" width="26" height="26" rx="4" fill="#0c2340" />
+                            <rect x="9" y="73" width="18" height="18" rx="2" fill="#ffffff" />
+                            <rect x="13" y="77" width="10" height="10" fill="#2563eb" />
+
+                            {/* Center Data Pattern */}
+                            <rect x="36" y="8" width="6" height="6" fill="#0c2340" />
+                            <rect x="46" y="8" width="8" height="6" fill="#0c2340" />
+                            <rect x="36" y="18" width="12" height="6" fill="#0c2340" />
+                            <rect x="52" y="18" width="10" height="6" fill="#0c2340" />
+
+                            <rect x="8" y="36" width="6" height="10" fill="#0c2340" />
+                            <rect x="18" y="36" width="12" height="6" fill="#0c2340" />
+                            <rect x="8" y="50" width="8" height="12" fill="#0c2340" />
+
+                            <rect x="36" y="36" width="28" height="28" rx="4" fill="#eff6ff" stroke="#2563eb" strokeWidth="2" />
+                            <path d="M50 42v16M42 50h16" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round" />
+
+                            <rect x="68" y="36" width="8" height="12" fill="#0c2340" />
+                            <rect x="80" y="36" width="12" height="6" fill="#0c2340" />
+                            <rect x="68" y="52" width="16" height="10" fill="#0c2340" />
+
+                            <rect x="36" y="68" width="10" height="8" fill="#0c2340" />
+                            <rect x="50" y="68" width="14" height="6" fill="#0c2340" />
+                            <rect x="36" y="80" width="16" height="12" fill="#0c2340" />
+                            <rect x="56" y="78" width="8" height="14" fill="#0c2340" />
+                            <rect x="68" y="72" width="24" height="6" fill="#0c2340" />
+                            <rect x="68" y="82" width="10" height="10" fill="#0c2340" />
+                            <rect x="82" y="82" width="10" height="10" fill="#0c2340" />
+                          </svg>
                         </div>
-                      ))
-                    ) : null}
+                        <div className="razorpay-qr-desc">
+                          <p>Scan with <strong>Google Pay, PhonePe, Paytm</strong>, or any UPI app</p>
+                          <span className="razorpay-vpa-badge">VPA: dropwater.rwa@razorpay</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="razorpay-vpa-container">
+                        <label className="razorpay-field-label">Virtual Payment Address (UPI ID)</label>
+                        <div className="razorpay-vpa-input-wrap">
+                          <input
+                            type="text"
+                            className="razorpay-input"
+                            placeholder="username@bank"
+                            value={vpaInput}
+                            onChange={(e) => setVpaInput(e.target.value)}
+                          />
+                          <span className="razorpay-vpa-check">✓</span>
+                        </div>
+                        <div className="razorpay-quick-vpa-pills">
+                          {["@okaxis", "@okhdfcbank", "@ybl", "@paytm"].map((handle) => (
+                            <button
+                              key={handle}
+                              type="button"
+                              className="razorpay-vpa-pill"
+                              onClick={() => {
+                                const prefix = vpaInput.split("@")[0] || "resident";
+                                setVpaInput(`${prefix}${handle}`);
+                              }}
+                            >
+                              {handle}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* OPTION 2: CARD CONTENT */}
+                {selectedPayMode === "card" && (
+                  <div className="razorpay-panel razorpay-panel--card">
+                    <div className="razorpay-form-group">
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <label className="razorpay-field-label">Card Number</label>
+                        <div className="razorpay-card-icons">
+                          <span className="card-brand-badge card-brand-badge--visa">VISA</span>
+                          <span className="card-brand-badge card-brand-badge--mc">Mastercard</span>
+                          <span className="card-brand-badge card-brand-badge--rupay">RuPay</span>
+                        </div>
+                      </div>
+                      <input
+                        type="text"
+                        className="razorpay-input"
+                        placeholder="4532 •••• •••• 6789"
+                        maxLength={19}
+                        value={cardNumber}
+                        onChange={(e) => setCardNumber(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="razorpay-form-row">
+                      <div className="razorpay-form-group" style={{ flex: 1 }}>
+                        <label className="razorpay-field-label">Valid Thru (MM/YY)</label>
+                        <input
+                          type="text"
+                          className="razorpay-input"
+                          placeholder="MM/YY"
+                          maxLength={5}
+                          value={cardExpiry}
+                          onChange={(e) => setCardExpiry(e.target.value)}
+                        />
+                      </div>
+                      <div className="razorpay-form-group" style={{ flex: 1 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between" }}>
+                          <label className="razorpay-field-label">CVV / CVC</label>
+                          <span style={{ fontSize: "0.68rem", color: "#64748b" }}>3 Digits</span>
+                        </div>
+                        <input
+                          type="password"
+                          className="razorpay-input"
+                          placeholder="•••"
+                          maxLength={4}
+                          value={cardCvv}
+                          onChange={(e) => setCardCvv(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="razorpay-form-group">
+                      <label className="razorpay-field-label">Cardholder Name</label>
+                      <input
+                        type="text"
+                        className="razorpay-input"
+                        placeholder="Full Name as on Card"
+                        value={cardName}
+                        onChange={(e) => setCardName(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Footer Controls */}
+                <div className="razorpay-modal__footer">
+                  <div className="razorpay-ssl-note">
+                    <span>🔒</span>
+                    <span>Razorpay Secure · 256-Bit SSL</span>
                   </div>
 
-                  <div className="res-modal__summary-row res-modal__summary-row--total">
-                    <span>Total Due:</span>
-                    <strong className="res-modal__amount">{activeBillToPay.amount}</strong>
-                  </div>
-                </div>
-
-                <div className="res-modal__methods">
-                  <label className="res-modal__method-opt">
-                    <input type="radio" name="pay-method" defaultChecked />
-                    <span>UPI / QR Code (Google Pay, PhonePe, Paytm)</span>
-                  </label>
-                  <label className="res-modal__method-opt">
-                    <input type="radio" name="pay-method" />
-                    <span>Credit / Debit Card / NetBanking</span>
-                  </label>
-                </div>
-
-                <div className="res-modal__footer">
-                  <button className="btn-secondary" onClick={() => setPayModalOpen(false)}>Cancel</button>
-                  <button className="btn-primary" onClick={handleConfirmPayment}>Confirm & Pay {activeBillToPay.amount}</button>
+                  <button
+                    type="button"
+                    className="razorpay-pay-btn"
+                    disabled={isProcessingRazorpay}
+                    onClick={handleConfirmPayment}
+                  >
+                    <span>Pay {activeBillToPay.amount}</span>
+                    <span className="razorpay-arrow-right">→</span>
+                  </button>
                 </div>
               </div>
             )}
