@@ -38,5 +38,23 @@ public class RegisterRequest {
 
     private String apartmentName;
 
+    private String societyRegistrationNumber;
+
+    private String societyAddress;
+
+    private String city;
+
+    private String state;
+
+    private Integer totalUnits;
+
     private Long householdId;
+
+    private String documentBond;
+
+    private String documentCertificate;
+
+    private String documentIdProof;
+
+    private String documentNotes;
 }

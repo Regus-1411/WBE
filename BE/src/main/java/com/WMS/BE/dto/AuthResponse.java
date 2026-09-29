@@ -1,5 +1,6 @@
 package com.WMS.BE.dto;
 
+import com.WMS.BE.model.User;
 import com.WMS.BE.model.User.Role;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,4 +25,9 @@ public class AuthResponse {
     private String apartmentName;
     private Long householdId;
     private String householdUnitNumber;
+    private String householdBlock;
+    private User.ApprovalStatus approvalStatus;
+    private String message;
+    private String documentBond;
+    private String documentCertificate;
 }

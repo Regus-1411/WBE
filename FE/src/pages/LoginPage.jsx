@@ -27,7 +27,9 @@ function LoginPage() {
       const user = await login(username, password);
 
       // Route based on role
-      if (user && user.role === "APARTMENT_ADMIN") {
+      if (user && user.role === "MAIN_ADMIN") {
+        navigate("/superadmin/dashboard");
+      } else if (user && user.role === "APARTMENT_ADMIN") {
         navigate("/admin/dashboard");
       } else {
         navigate("/resident/dashboard");
@@ -38,6 +40,7 @@ function LoginPage() {
       setIsLoading(false);
     }
   };
+
 
   return (
     <div className="login-page" id="login-page">
@@ -247,6 +250,7 @@ function LoginPage() {
                   </>
                 )}
               </button>
+
 
               <div className="login-card__divider">
                 <div className="login-card__divider-line" />

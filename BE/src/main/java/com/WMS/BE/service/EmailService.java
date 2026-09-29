@@ -66,6 +66,25 @@ public interface EmailService {
     void sendCustomNotification(String toEmail, String subject, String bodyHtml);
 
     /**
+     * Asynchronously sends confirmation of account creation & approval to an apartment administrator.
+     */
+    void sendAdminApprovalConfirmation(
+            String toEmail,
+            String adminName,
+            String username,
+            String apartmentName
+    );
+
+    /**
+     * Asynchronously sends acknowledgement email upon apartment administrator registration submission.
+     */
+    void sendAdminRegistrationSubmitted(
+            String toEmail,
+            String adminName,
+            String apartmentName
+    );
+
+    /**
      * Synchronously sends a test diagnostic email to verify SMTP credentials and network connectivity.
      */
     boolean sendTestEmail(String toEmail);

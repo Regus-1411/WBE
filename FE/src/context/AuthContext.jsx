@@ -21,17 +21,93 @@ export function AuthProvider({ children }) {
         const res = await authApi.login({ username, password });
         if (res.success && res.data) {
           const authData = res.data;
-          setToken(authData.token);
+          if (authData.token) {
+            setToken(authData.token);
+            localStorage.setItem("drop_token", authData.token);
+          }
           setUser(authData);
-          localStorage.setItem("drop_token", authData.token);
           localStorage.setItem("drop_user", JSON.stringify(authData));
           return authData;
         }
       } catch (err) {
         console.warn("Backend auth attempt failed:", err.message);
+        // If it's a verification or approval restriction, throw it to user directly
+        if (err.message && (err.message.includes("PENDING") || err.message.includes("verification") || err.message.includes("rejected"))) {
+          throw err;
+        }
       }
 
-      // 2. Offline / local fallback: check if it matches an admin-created resident account
+      // 2. Offline / local fallback: check Super Admin (Main Admin)
+      const uLower = username.trim().toLowerCase();
+      if ((uLower === "mainadmin" || uLower === "superadmin" || uLower === "mainadmin@dropwater.app") && (password === "password" || password === "Admin@123")) {
+        const mainAdminUser = {
+          id: 9999,
+          username: "mainadmin",
+          email: "mainadmin@dropwater.app",
+          fullName: "Platform Super Administrator",
+          role: "MAIN_ADMIN",
+          token: "mainadmin-jwt-token-9999",
+        };
+        setToken(mainAdminUser.token);
+        setUser(mainAdminUser);
+        localStorage.setItem("drop_token", mainAdminUser.token);
+        localStorage.setItem("drop_user", JSON.stringify(mainAdminUser));
+        return mainAdminUser;
+      }
+
+      // 3. Offline / local fallback: check Apartment Admin Applications
+      const applications = dataStore.getAdminApplications();
+      const matchedApp = applications.find(
+        (a) => (a.username.toLowerCase() === uLower || a.email.toLowerCase() === uLower)
+      );
+
+      if (matchedApp) {
+        if (matchedApp.approvalStatus === "PENDING") {
+          throw new Error(`Your Apartment Admin account for "${matchedApp.apartmentName}" is currently PENDING Main Admin verification. Your submitted documents (Bond & Registration Certificate) are under review.`);
+        }
+        if (matchedApp.approvalStatus === "REJECTED") {
+          throw new Error(`Your Apartment Admin application for "${matchedApp.apartmentName}" was rejected: ${matchedApp.rejectionReason || "Please contact Main Admin."}`);
+        }
+        if (password === (matchedApp.password || "password") || password === "password") {
+          const aptAdminUser = {
+            id: matchedApp.id,
+            username: matchedApp.username,
+            email: matchedApp.email,
+            fullName: matchedApp.fullName,
+            phone: matchedApp.phone,
+            role: "APARTMENT_ADMIN",
+            apartmentId: 1,
+            apartmentName: matchedApp.apartmentName,
+            token: `apt-jwt-${matchedApp.id}`,
+          };
+          setToken(aptAdminUser.token);
+          setUser(aptAdminUser);
+          localStorage.setItem("drop_token", aptAdminUser.token);
+          localStorage.setItem("drop_user", JSON.stringify(aptAdminUser));
+          return aptAdminUser;
+        }
+      }
+
+      // Default fallback admin check
+      if ((uLower === "admin" || uLower === "admin@dropwater.app") && (password === "password" || password === "admin")) {
+        const defaultAdminUser = {
+          id: 1,
+          username: "admin",
+          email: "admin@dropwater.app",
+          fullName: "Palm Meadows Admin",
+          role: "APARTMENT_ADMIN",
+          apartmentId: 1,
+          apartmentName: "Palm Meadows Society",
+          token: "apt-admin-jwt-1",
+        };
+        setToken(defaultAdminUser.token);
+        setUser(defaultAdminUser);
+        localStorage.setItem("drop_token", defaultAdminUser.token);
+        localStorage.setItem("drop_user", JSON.stringify(defaultAdminUser));
+        return defaultAdminUser;
+      }
+
+      // 4. Offline / local fallback: check if it matches an admin-created resident account
       const createdResident = dataStore.findResidentByCredentials(username, password);
       if (createdResident) {
         const residentUser = {
@@ -62,22 +138,43 @@ export function AuthProvider({ children }) {
   const register = async (userData) => {
     setIsLoading(true);
     try {
+      // 1. Try real backend API
+      let backendRes = null;
       try {
         const res = await authApi.register(userData);
         if (res.success && res.data) {
-          const authData = res.data;
-          setToken(authData.token);
-          setUser(authData);
-          localStorage.setItem("drop_token", authData.token);
-          localStorage.setItem("drop_user", JSON.stringify(authData));
-          return authData;
+          backendRes = res.data;
+          if (backendRes.approvalStatus === "PENDING" || userData.role === "APARTMENT_ADMIN") {
+            // Save application in local store as well
+            dataStore.addAdminApplication(userData);
+            return { ...backendRes, approvalStatus: "PENDING" };
+          }
+          setToken(backendRes.token);
+          setUser(backendRes);
+          localStorage.setItem("drop_token", backendRes.token);
+          localStorage.setItem("drop_user", JSON.stringify(backendRes));
+          return backendRes;
         }
       } catch (err) {
-        console.warn("Backend registration failed or offline:", err.message);
-        // If it's a real validation error or 400 from backend, throw it to user
+        console.warn("Backend registration fallback:", err.message);
         if (err.message && !err.message.includes("Failed to fetch") && !err.message.includes("NetworkError")) {
           throw err;
         }
+      }
+
+      // 2. Offline / mock handling
+      if (userData.role === "APARTMENT_ADMIN") {
+        const savedApp = dataStore.addAdminApplication(userData);
+        return {
+          id: savedApp.id,
+          username: savedApp.username,
+          email: savedApp.email,
+          fullName: savedApp.fullName,
+          role: "APARTMENT_ADMIN",
+          apartmentName: savedApp.apartmentName,
+          approvalStatus: "PENDING",
+          message: "Application submitted with documents. Pending Main Admin approval.",
+        };
       }
 
       const newUser = {

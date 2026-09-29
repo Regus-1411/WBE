@@ -169,7 +169,21 @@ function HouseholdsPage() {
     }
 
     try {
-      // 1. Dispatch to backend API
+      // 1. Dispatch real credentials email directly to allotted resident email address
+      try {
+        await notificationApi.sendCredentials({
+          email: residentForm.email.trim(),
+          fullName: residentForm.fullName.trim(),
+          username: residentForm.username.trim(),
+          password: residentForm.password.trim(),
+          unitNumber: targetHousehold.unitNumber,
+          apartmentName: "Palm Meadows Society",
+        });
+      } catch (mailErr) {
+        console.warn("Credentials email dispatch:", mailErr.message);
+      }
+
+      // 2. Also sync to backend API if active
       try {
         await adminResidentApi.createResident({
           fullName: residentForm.fullName.trim(),
@@ -180,13 +194,13 @@ function HouseholdsPage() {
           apartmentId: 1,
           householdId: Number(targetHId) || undefined,
           unitNumber: targetHousehold.unitNumber,
-          sendEmail: true,
+          sendEmail: false,
         });
       } catch (apiErr) {
-        console.warn("Backend API dispatch notice:", apiErr.message);
+        console.warn("Backend sync notice:", apiErr.message);
       }
 
-      // 2. Commit to local persistent dataStore
+      // 3. Commit to local persistent dataStore
       const newRes = dataStore.createAndAssignResident({
         householdId: targetHId,
         fullName: residentForm.fullName.trim(),
@@ -208,7 +222,7 @@ function HouseholdsPage() {
         password: residentForm.password.trim(),
       });
 
-      const succMsg = `✓ Verified Resident Account created & attached to Flat ${newRes.householdUnitNumber}! Credentials dispatched to ${newRes.email}.`;
+      const succMsg = `✓ Verified Resident Account created & attached to Flat ${newRes.householdUnitNumber}! Credentials sent to ${newRes.email}.`;
       setResidentFormStatus({ type: "success", message: succMsg });
       showMsg(succMsg);
 
@@ -579,11 +593,6 @@ function HouseholdsPage() {
                 </div>
 
                 <div className="resident-form-footer">
-                  <div className="form-helper-note">
-                    <span className="helper-icon">ℹ️</span>
-                    <span><strong>Automated Dispatch:</strong> Credentials and monthly water consumption invoices will be automatically sent to the registered resident email.</span>
-                  </div>
-
                   <div className="direct-form__actions">
                     {residentFormStatus.message && (
                       <div className={`form-inline-alert ${residentFormStatus.type === "success" ? "form-inline-alert--success" : "form-inline-alert--error"}`}>

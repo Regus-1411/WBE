@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none">
+  <rect width="512" height="512" rx="96" fill="url(#bg-grad-512)" />
+  <circle cx="256" cy="256" r="170" fill="url(#circle-grad-512)" fill-opacity="0.15" />
+  <!-- Water Droplet Logo -->
+  <path d="M256 100C256 100 160 224 160 304C160 357.019 202.981 400 256 400C309.019 400 352 357.019 352 304C352 224 256 100 256 100Z" fill="url(#drop-grad-512)" filter="url(#drop-shadow-512)" />
+  <!-- Droplet Highlight -->
+  <path d="M224 256C224 218 245 180 256 158C245 186 218 230 218 288C218 315 229 336 235 346C227 330 224 298 224 256Z" fill="#ffffff" fill-opacity="0.5" />
+  <!-- Ripple rings -->
+  <path d="M181 362C197 378 224 388 256 388C288 388 315 378 331 362" stroke="#ffffff" stroke-width="8" stroke-linecap="round" stroke-opacity="0.4" />
+  <defs>
+    <linearGradient id="bg-grad-512" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0f172a" />
+      <stop offset="0.5" stop-color="#0369a1" />
+      <stop offset="1" stop-color="#0284c7" />
+    </linearGradient>
+    <linearGradient id="circle-grad-512" x1="86" y1="86" x2="426" y2="426" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#38bdf8" />
+      <stop offset="1" stop-color="#0284c7" />
+    </linearGradient>
+    <linearGradient id="drop-grad-512" x1="256" y1="100" x2="256" y2="400" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#38bdf8" />
+      <stop offset="0.6" stop-color="#0ea5e9" />
+      <stop offset="1" stop-color="#0284c7" />
+    </linearGradient>
+    <filter id="drop-shadow-512" x="128" y="80" width="256" height="360" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="16" stdDeviation="16" flood-color="#0284c7" flood-opacity="0.45" />
+    </filter>
+  </defs>
+</svg>

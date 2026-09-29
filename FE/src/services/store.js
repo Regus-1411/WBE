@@ -8,12 +8,20 @@ const STORAGE_KEYS = {
   LEAKS: "drop_leaks_data",
   PLANS: "drop_tariff_plans_data",
   BULK_PURCHASES: "drop_bulk_purchases_data",
+  ADMIN_APPLICATIONS: "drop_admin_applications_data",
+  APARTMENTS: "drop_apartments_data",
+  AUDIT_LOGS: "drop_audit_logs_data",
 };
+
+const _memoryStore = {};
 
 function getLocal(key, fallback = []) {
   try {
-    const saved = localStorage.getItem(key);
-    return saved ? JSON.parse(saved) : fallback;
+    if (typeof window !== "undefined" && window.localStorage) {
+      const saved = localStorage.getItem(key);
+      return saved ? JSON.parse(saved) : fallback;
+    }
+    return _memoryStore[key] ? JSON.parse(JSON.stringify(_memoryStore[key])) : fallback;
   } catch {
     return fallback;
   }
@@ -21,22 +29,46 @@ function getLocal(key, fallback = []) {
 
 function setLocal(key, value) {
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    if (typeof window !== "undefined" && window.localStorage) {
+      localStorage.setItem(key, JSON.stringify(value));
+    } else {
+      _memoryStore[key] = JSON.parse(JSON.stringify(value));
+    }
   } catch (e) {
     console.error("Storage error", e);
   }
 }
 
-// Clean out any previously stored sample/seed data from localStorage
-const STORE_VERSION = "drop_store_clean_v5";
+// Clean out any previously stored dummy residents from localStorage (preserving 'busa' or real records)
+const STORE_VERSION = "drop_store_clean_v7";
 if (typeof window !== "undefined" && window.localStorage) {
   if (localStorage.getItem("drop_store_version") !== STORE_VERSION) {
-    localStorage.setItem(STORAGE_KEYS.HOUSEHOLDS, "[]");
-    localStorage.setItem(STORAGE_KEYS.RESIDENTS, "[]");
+    try {
+      const existingResidents = JSON.parse(localStorage.getItem(STORAGE_KEYS.RESIDENTS) || "[]");
+      const busaResidents = existingResidents.filter((r) => {
+        const text = `${r.username || ""} ${r.fullName || ""} ${r.email || ""}`.toLowerCase();
+        return text.includes("busa");
+      });
+      localStorage.setItem(STORAGE_KEYS.RESIDENTS, JSON.stringify(busaResidents));
+
+      const existingHouseholds = JSON.parse(localStorage.getItem(STORAGE_KEYS.HOUSEHOLDS) || "[]");
+      const busaHouseholds = existingHouseholds.filter((h) => {
+        const text = `${h.residentUsername || ""} ${h.residentName || ""} ${h.residentEmail || ""}`.toLowerCase();
+        return text.includes("busa");
+      });
+      localStorage.setItem(STORAGE_KEYS.HOUSEHOLDS, JSON.stringify(busaHouseholds));
+    } catch {
+      localStorage.setItem(STORAGE_KEYS.HOUSEHOLDS, "[]");
+      localStorage.setItem(STORAGE_KEYS.RESIDENTS, "[]");
+    }
+
     localStorage.setItem(STORAGE_KEYS.READINGS, "[]");
     localStorage.setItem(STORAGE_KEYS.BILLS, "[]");
     localStorage.setItem(STORAGE_KEYS.LEAKS, "[]");
     localStorage.setItem(STORAGE_KEYS.BULK_PURCHASES, "[]");
+    localStorage.setItem(STORAGE_KEYS.ADMIN_APPLICATIONS, "[]");
+    localStorage.setItem(STORAGE_KEYS.APARTMENTS, "[]");
+    localStorage.setItem(STORAGE_KEYS.AUDIT_LOGS, "[]");
     localStorage.setItem("drop_store_version", STORE_VERSION);
   }
 }
@@ -85,12 +117,13 @@ export const dataStore = {
 
   addHousehold: (data) => {
     const list = dataStore.getHouseholds();
+    const unitNumber = (data.unitNumber || "").trim();
     const newUnit = {
       id: Date.now(),
-      unitNumber: data.unitNumber.trim(),
+      unitNumber: unitNumber,
       block: data.block || "Block A",
       floor: data.floor || "1st Floor",
-      meterSerialNumber: data.meterSerialNumber ? data.meterSerialNumber.trim() : `WM-${data.unitNumber}-2026`,
+      meterSerialNumber: data.meterSerialNumber ? data.meterSerialNumber.trim() : `WM-${unitNumber}-2026`,
       residentId: null,
       residentName: "",
       residentUsername: "",
@@ -715,7 +748,7 @@ export const dataStore = {
     const leaks = dataStore.getLeaks();
     const newLeak = {
       id: `LK-${Date.now().toString().slice(-3)}`,
-      location: data.location.trim(),
+      location: (data.location || "").trim(),
       severity: data.severity || "Medium",
       flowRate: data.flowRate ? `${data.flowRate} L/hr` : "15 L/hr",
       detectedAt: "Just now",
@@ -816,9 +849,10 @@ export const dataStore = {
         const slabVolume = volKLPerUnit > 0 ? volKLPerUnit : 1;
         const slabRate = Math.round((costPerUnit / slabVolume) * 100) / 100;
 
+        const uniqueSuffix = `${Date.now().toString().slice(-6)}-${Math.random().toString(36).slice(2,5)}`;
         return {
-          id: `BILL-BP-${Date.now().toString().slice(-4)}-${h.unitNumber}`,
-          invoiceNumber: `INV-BP-${Date.now().toString().slice(-4)}-${h.unitNumber}`,
+          id: `BILL-BP-${uniqueSuffix}-${h.unitNumber}`,
+          invoiceNumber: `INV-BP-${uniqueSuffix}-${h.unitNumber}`,
           householdId: h.id,
           unitNumber: h.unitNumber,
           residentName: h.residentName || "Resident",
@@ -930,8 +964,353 @@ export const dataStore = {
     setLocal(STORAGE_KEYS.READINGS, readings);
   },
 
+  // ── SUPER ADMIN & APARTMENT ADMIN APPROVAL WORKFLOW ──
+  getAdminApplications: () => {
+    return getLocal(STORAGE_KEYS.ADMIN_APPLICATIONS, []);
+  },
+
+  addAdminApplication: (data) => {
+    const list = dataStore.getAdminApplications();
+    const newApp = {
+      id: `APP-${Date.now().toString().slice(-4)}`,
+      username: (data.username || "").trim(),
+      email: (data.email || "").trim(),
+      fullName: (data.fullName || "").trim(),
+      phone: data.phone ? data.phone.trim() : (data.phoneNumber ? data.phoneNumber.trim() : ""),
+      password: data.password || "password",
+      apartmentName: data.apartmentName ? data.apartmentName.trim() : (data.societyName ? data.societyName.trim() : "New Society"),
+      societyRegistrationNumber: data.societyRegistrationNumber ? data.societyRegistrationNumber.trim() : `REG-${Date.now().toString().slice(-4)}`,
+      societyAddress: data.societyAddress ? data.societyAddress.trim() : "Main City Road",
+      city: data.city ? data.city.trim() : "Bengaluru",
+      state: data.state ? data.state.trim() : "Karnataka",
+      totalUnits: Number(data.totalUnits || data.totalFlats) || 50,
+      approvalStatus: "PENDING",
+      documentBond: data.documentBond || "Society_Bond_Document.pdf",
+      documentCertificate: data.documentCertificate || "Apartment_Registration_Certificate.pdf",
+      documentIdProof: data.documentIdProof || "",
+      documentNotes: data.documentNotes || "",
+      rejectionReason: null,
+      isActive: false,
+      createdAt: new Date().toISOString(),
+      approvedAt: null,
+    };
+
+    // Remove old application with same username or email if exists
+    const filtered = list.filter(
+      (a) => a.username.toLowerCase() !== newApp.username.toLowerCase() && a.email.toLowerCase() !== newApp.email.toLowerCase()
+    );
+
+    const updated = [newApp, ...filtered];
+    setLocal(STORAGE_KEYS.ADMIN_APPLICATIONS, updated);
+    dataStore.addAuditLog({
+      type: "ADMIN_REGISTERED",
+      title: "New Society Registration Submitted",
+      description: `${newApp.fullName} submitted registration & documents for ${newApp.apartmentName}`,
+      user: newApp.email,
+    });
+    return newApp;
+  },
+
+  approveAdminApplication: (idOrIdentifier) => {
+    const list = dataStore.getAdminApplications();
+    const idStr = String(idOrIdentifier).toLowerCase().trim();
+    
+    // Match by id, username, or email
+    const target = list.find(
+      (a) => String(a.id).toLowerCase() === idStr || 
+             a.username?.toLowerCase() === idStr || 
+             a.email?.toLowerCase() === idStr ||
+             (typeof idOrIdentifier === "number" && a.id == idOrIdentifier)
+    );
+
+    if (!target) {
+      console.warn("Application not found for ID/Identifier:", idOrIdentifier);
+      return null;
+    }
+
+    const approvedAt = new Date().toISOString();
+    const updated = list.map((a) =>
+      a.id === target.id || a.username?.toLowerCase() === target.username?.toLowerCase()
+        ? { ...a, approvalStatus: "APPROVED", isActive: true, approvedAt, rejectionReason: null }
+        : a
+    );
+    setLocal(STORAGE_KEYS.ADMIN_APPLICATIONS, updated);
+
+    // Also register and activate society in societies list
+    dataStore.addSociety({
+      name: target.apartmentName,
+      address: target.societyAddress,
+      city: target.city,
+      state: target.state,
+      totalUnits: target.totalUnits,
+      adminName: target.fullName,
+      adminEmail: target.email,
+    });
+
+    dataStore.addAuditLog({
+      type: "ADMIN_APPROVED",
+      title: "Society Admin Approved",
+      description: `Main Admin approved account for ${target.fullName} (${target.apartmentName})`,
+      user: "Main Admin",
+    });
+
+    return { ...target, approvalStatus: "APPROVED", isActive: true, approvedAt };
+  },
+
+  approveAdminApplicationByUsername: (username) => {
+    if (!username) return;
+    return dataStore.approveAdminApplication(username);
+  },
+
+  rejectAdminApplication: (idOrIdentifier, reason = "Documents did not meet criteria") => {
+    const list = dataStore.getAdminApplications();
+    const idStr = String(idOrIdentifier).toLowerCase().trim();
+    
+    const target = list.find(
+      (a) => String(a.id).toLowerCase() === idStr || 
+             a.username?.toLowerCase() === idStr || 
+             a.email?.toLowerCase() === idStr
+    );
+
+    if (!target) return null;
+
+    const updated = list.map((a) =>
+      a.id === target.id || a.username?.toLowerCase() === target.username?.toLowerCase()
+        ? { ...a, approvalStatus: "REJECTED", isActive: false, rejectionReason: reason }
+        : a
+    );
+    setLocal(STORAGE_KEYS.ADMIN_APPLICATIONS, updated);
+
+    dataStore.addAuditLog({
+      type: "ADMIN_REJECTED",
+      title: "Society Admin Rejected",
+      description: `Main Admin rejected application for ${target.fullName} (${target.apartmentName}) — Reason: ${reason}`,
+      user: "Main Admin",
+    });
+
+    return { ...target, approvalStatus: "REJECTED", isActive: false, rejectionReason: reason };
+  },
+
+  // ── SOCIETIES / APARTMENTS DIRECTORY ──
+  getSocieties: () => {
+    return getLocal(STORAGE_KEYS.APARTMENTS, []);
+  },
+
+  addSociety: (data) => {
+    const list = dataStore.getSocieties();
+    const exists = list.some((s) => s.name?.toLowerCase() === data.name?.toLowerCase());
+    if (exists) return;
+
+    const newSoc = {
+      id: Date.now(),
+      name: data.name.trim(),
+      address: data.address || "City Center",
+      city: data.city || "Bengaluru",
+      state: data.state || "Karnataka",
+      totalUnits: Number(data.totalUnits) || 50,
+      occupiedUnits: 0,
+      activeMeters: 0,
+      adminName: data.adminName || "Admin",
+      adminEmail: data.adminEmail || "",
+      adminPhone: data.adminPhone || "",
+      status: "Active",
+      monthlyUsageKL: 0,
+      totalRevenueBilled: 0,
+      totalRevenueCollected: 0,
+      createdAt: new Date().toISOString(),
+    };
+    const updated = [...list, newSoc];
+    setLocal(STORAGE_KEYS.APARTMENTS, updated);
+    return newSoc;
+  },
+
+  // ── MULTI-SOCIETY GROUPED RESIDENTS DIRECTORY ──
+  getSocietiesWithResidentGroups: () => {
+    const societies = dataStore.getSocieties();
+    const localHouseholds = dataStore.getHouseholds();
+    const localResidents = dataStore.getAllResidents();
+
+    if (societies.length === 0) {
+      if (localHouseholds.length > 0 || localResidents.length > 0) {
+        return [
+          {
+            id: 1,
+            name: "Palm Meadows Society",
+            city: "Bengaluru",
+            state: "Karnataka",
+            adminName: "Palm Meadows Admin",
+            households: localHouseholds,
+            residents: localResidents,
+            residentsCount: localResidents.length,
+            occupiedFlats: localHouseholds.length,
+          }
+        ];
+      }
+      return [];
+    }
+
+    return societies.map((soc) => {
+      const socHouseholds = localHouseholds.filter(
+        (h) => !h.societyName || h.societyName === soc.name || String(h.societyId) === String(soc.id)
+      );
+      const socResidents = localResidents.filter(
+        (r) => !r.societyName || r.societyName === soc.name || String(r.societyId) === String(soc.id)
+      );
+
+      return {
+        ...soc,
+        households: socHouseholds,
+        residents: socResidents,
+        residentsCount: socResidents.length,
+        occupiedFlats: socHouseholds.length,
+      };
+    });
+  },
+
+  // ── GLOBAL FINANCIALS & REVENUE ENGINE ──
+  getGlobalFinancialStats: () => {
+    const societiesGrouped = dataStore.getSocietiesWithResidentGroups();
+    const localBills = dataStore.getBills();
+
+    // Construct universal master invoices ledger across all societies
+    let allInvoices = [];
+
+    societiesGrouped.forEach((soc) => {
+      const socBills = localBills.filter(
+        (b) => !b.societyName || b.societyName === soc.name || String(b.societyId) === String(soc.id)
+      );
+      socBills.forEach((b) => {
+        const isPaid = (b.status || "").toLowerCase() === "paid";
+        const isOverdue = (b.status || "").toLowerCase() === "overdue";
+        allInvoices.push({
+          id: b.id || b.invoiceNumber,
+          invoiceNumber: b.invoiceNumber || b.id,
+          societyId: soc.id,
+          societyName: soc.name,
+          unitNumber: b.unitNumber,
+          residentName: b.residentName || "Resident",
+          residentEmail: b.residentEmail,
+          period: b.period || "Current Cycle",
+          consumptionKL: Number(b.consumptionKL) || 0,
+          rawAmount: Number(b.rawAmount) || 0,
+          amount: b.amount || `₹${b.rawAmount || 0}`,
+          status: isPaid ? "PAID" : isOverdue ? "OVERDUE" : "PENDING",
+          paidAt: b.paidAt,
+          paymentMethod: b.paymentMethod || (isPaid ? "UPI Auto-Settlement" : null),
+          billDate: b.billDate || new Date().toISOString().split("T")[0],
+          dueDate: b.dueDate || "20th of month",
+        });
+      });
+    });
+
+    // Calculate Global Financial KPIs
+    const totalBilled = allInvoices.reduce((acc, inv) => acc + (Number(inv.rawAmount) || 0), 0);
+    const paidInvoices = allInvoices.filter((inv) => inv.status === "PAID");
+    const totalCollected = paidInvoices.reduce((acc, inv) => acc + (Number(inv.rawAmount) || 0), 0);
+    const pendingInvoices = allInvoices.filter((inv) => inv.status === "PENDING");
+    const totalPending = pendingInvoices.reduce((acc, inv) => acc + (Number(inv.rawAmount) || 0), 0);
+    const overdueInvoices = allInvoices.filter((inv) => inv.status === "OVERDUE");
+    const totalOverdue = overdueInvoices.reduce((acc, inv) => acc + (Number(inv.rawAmount) || 0), 0);
+    const totalWaterVolumeKL = allInvoices.reduce((acc, inv) => acc + (Number(inv.consumptionKL) || 0), 0);
+
+    const collectionEfficiency = totalBilled > 0 ? Math.round((totalCollected / totalBilled) * 100) : 0;
+    const avgRevenuePerFlat = allInvoices.length > 0 ? Math.round(totalBilled / allInvoices.length) : 0;
+
+    // Society-wise financial summary
+    const societyBreakdown = societiesGrouped.map((soc) => {
+      const socInvoices = allInvoices.filter((inv) => inv.societyName === soc.name || inv.societyId === soc.id);
+      const socBilled = socInvoices.reduce((acc, i) => acc + (Number(i.rawAmount) || 0), 0);
+      const socPaid = socInvoices.filter((i) => i.status === "PAID").reduce((acc, i) => acc + (Number(i.rawAmount) || 0), 0);
+      const socPending = socInvoices.filter((i) => i.status === "PENDING").reduce((acc, i) => acc + (Number(i.rawAmount) || 0), 0);
+      const socOverdue = socInvoices.filter((i) => i.status === "OVERDUE").reduce((acc, i) => acc + (Number(i.rawAmount) || 0), 0);
+      const rate = socBilled > 0 ? Math.round((socPaid / socBilled) * 100) : 0;
+
+      return {
+        id: soc.id,
+        name: soc.name,
+        city: soc.city,
+        state: soc.state,
+        adminName: soc.adminName,
+        totalFlats: soc.totalUnits || soc.households.length,
+        invoicedFlats: socInvoices.length,
+        totalBilled: socBilled,
+        totalPaid: socPaid,
+        totalPending: socPending,
+        totalOverdue: socOverdue,
+        collectionRate: rate,
+      };
+    });
+
+    return {
+      totalRevenueGenerated: totalBilled,
+      totalRevenueCollected: totalCollected,
+      totalPendingRevenue: totalPending,
+      totalOverdueRevenue: totalOverdue,
+      totalInvoicesCount: allInvoices.length,
+      paidInvoicesCount: paidInvoices.length,
+      pendingInvoicesCount: pendingInvoices.length,
+      overdueInvoicesCount: overdueInvoices.length,
+      collectionEfficiency,
+      avgRevenuePerFlat,
+      totalWaterVolumeKL: Number(totalWaterVolumeKL.toFixed(1)),
+      societyBreakdown,
+      invoices: allInvoices,
+    };
+  },
+
+  // ── AUDIT LOGS & ACTIVITY ──
+  getAuditLogs: () => {
+    return getLocal(STORAGE_KEYS.AUDIT_LOGS, []);
+  },
+
+  addAuditLog: ({ type, title, description, user }) => {
+    const logs = dataStore.getAuditLogs();
+    const newLog = {
+      id: `AUD-${Date.now().toString().slice(-4)}`,
+      type: type || "INFO",
+      title: title || "System Event",
+      description: description || "",
+      user: user || "System",
+      timestamp: new Date().toISOString(),
+    };
+    setLocal(STORAGE_KEYS.AUDIT_LOGS, [newLog, ...logs]);
+    return newLog;
+  },
+
+  // ── SUPER ADMIN STATS ──
+  getSuperAdminStats: () => {
+    const fin = dataStore.getGlobalFinancialStats();
+    const applications = dataStore.getAdminApplications();
+    const societies = dataStore.getSocieties();
+    const auditLogs = dataStore.getAuditLogs();
+
+    const pendingCount = applications.filter((a) => a.approvalStatus === "PENDING").length;
+    const approvedAdmins = applications.filter((a) => a.approvalStatus === "APPROVED").length;
+
+    return {
+      totalSocieties: societies.length,
+      totalApartmentAdmins: approvedAdmins,
+      totalPendingApprovals: pendingCount,
+      totalHouseholds: fin.totalInvoicesCount || 0,
+      totalResidents: fin.totalInvoicesCount || 0,
+      totalWaterUsageKL: fin.totalWaterVolumeKL || 0,
+      totalRevenueBilled: fin.totalRevenueGenerated || 0,
+      totalRevenueCollected: fin.totalRevenueCollected || 0,
+      totalPendingRevenue: fin.totalPendingRevenue || 0,
+      collectionEfficiency: fin.collectionEfficiency || 0,
+      recentActivity: auditLogs.slice(0, 10),
+    };
+  },
+
   // ── CLEAR WHOLE DATABASE ──
   clearAll: () => {
-    Object.values(STORAGE_KEYS).forEach((k) => localStorage.removeItem(k));
+    if (typeof window !== "undefined" && window.localStorage) {
+      Object.values(STORAGE_KEYS).forEach((k) => localStorage.removeItem(k));
+      localStorage.removeItem("drop_store_version");
+    } else {
+      Object.keys(_memoryStore).forEach((k) => delete _memoryStore[k]);
+    }
   },
 };
+
+

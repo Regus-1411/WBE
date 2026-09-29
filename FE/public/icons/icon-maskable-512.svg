@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none">
+  <rect width="512" height="512" fill="#0284c7" />
+  <!-- Water Droplet Centered within Safe Area (maskable) -->
+  <path d="M256 120C256 120 176 224 176 294C176 340.392 211.817 378 256 378C300.183 378 336 340.392 336 294C336 224 256 120 256 120Z" fill="#ffffff" />
+  <!-- Accent overlay -->
+  <path d="M228 252C228 218 246 185 256 166C246 190 222 229 222 280C222 303 232 321 237 330C230 316 228 288 228 252Z" fill="#38bdf8" fill-opacity="0.8" />
+</svg>

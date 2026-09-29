@@ -106,4 +106,59 @@ public class NotificationController {
         return ResponseEntity.ok(ApiResponse.success("Leak alert email queued for " + toEmail, "DISPATCHED"));
     }
 
+    /**
+     * Dispatches resident credentials email upon allocation.
+     */
+    @PostMapping("/send-credentials")
+    public ResponseEntity<ApiResponse<String>> sendResidentCredentials(@RequestBody Map<String, Object> payload) {
+        String toEmail = (String) payload.get("email");
+        String fullName = (String) payload.getOrDefault("fullName", "Resident");
+        String username = (String) payload.getOrDefault("username", "resident");
+        String password = (String) payload.getOrDefault("password", "Drop@2026");
+        String unitNumber = (String) payload.getOrDefault("unitNumber", "Assigned Unit");
+        String apartmentName = (String) payload.getOrDefault("apartmentName", "DROP Water");
+
+        if (toEmail == null || toEmail.isBlank()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Recipient email is required"));
+        }
+
+        emailService.sendResidentCredentials(toEmail.trim(), fullName, username, password, unitNumber, apartmentName);
+        return ResponseEntity.ok(ApiResponse.success("Credentials email dispatched to " + toEmail, "DISPATCHED"));
+    }
+
+    /**
+     * Dispatches confirmation of account creation & approval to apartment admin.
+     */
+    @PostMapping("/send-admin-approval")
+    public ResponseEntity<ApiResponse<String>> sendAdminApproval(@RequestBody Map<String, Object> payload) {
+        String toEmail = (String) payload.get("email");
+        String adminName = (String) payload.getOrDefault("adminName", "Society Admin");
+        String username = (String) payload.getOrDefault("username", "admin");
+        String apartmentName = (String) payload.getOrDefault("apartmentName", "Society Management");
+
+        if (toEmail == null || toEmail.isBlank()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Recipient email is required"));
+        }
+
+        emailService.sendAdminApprovalConfirmation(toEmail.trim(), adminName, username, apartmentName);
+        return ResponseEntity.ok(ApiResponse.success("Admin approval confirmation email dispatched to " + toEmail, "DISPATCHED"));
+    }
+
+    /**
+     * Dispatches registration acknowledgement to apartment admin.
+     */
+    @PostMapping("/send-admin-registration-submitted")
+    public ResponseEntity<ApiResponse<String>> sendAdminRegistrationSubmitted(@RequestBody Map<String, Object> payload) {
+        String toEmail = (String) payload.get("email");
+        String adminName = (String) payload.getOrDefault("adminName", "Society Admin");
+        String apartmentName = (String) payload.getOrDefault("apartmentName", "Society Management");
+
+        if (toEmail == null || toEmail.isBlank()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Recipient email is required"));
+        }
+
+        emailService.sendAdminRegistrationSubmitted(toEmail.trim(), adminName, apartmentName);
+        return ResponseEntity.ok(ApiResponse.success("Admin registration acknowledgement dispatched to " + toEmail, "DISPATCHED"));
+    }
+
 }

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192" fill="none">
+  <rect width="192" height="192" rx="36" fill="url(#bg-grad)" />
+  <circle cx="96" cy="96" r="64" fill="url(#circle-grad)" fill-opacity="0.15" />
+  <!-- Water Droplet Logo -->
+  <path d="M96 38C96 38 60 84 60 114C60 133.882 76.118 150 96 150C115.882 150 132 133.882 132 114C132 84 96 38 96 38Z" fill="url(#drop-grad)" filter="url(#drop-shadow)" />
+  <!-- Droplet Highlight -->
+  <path d="M84 96C84 82 92 68 96 60C92 70 82 86 82 108C82 118 86 126 88 130C85 124 84 112 84 96Z" fill="#ffffff" fill-opacity="0.5" />
+  <!-- Ripple rings -->
+  <path d="M68 136C74 142 84 146 96 146C108 146 118 142 124 136" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-opacity="0.4" />
+  <defs>
+    <linearGradient id="bg-grad" x1="0" y1="0" x2="192" y2="192" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0f172a" />
+      <stop offset="0.5" stop-color="#0369a1" />
+      <stop offset="1" stop-color="#0284c7" />
+    </linearGradient>
+    <linearGradient id="circle-grad" x1="32" y1="32" x2="160" y2="160" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#38bdf8" />
+      <stop offset="1" stop-color="#0284c7" />
+    </linearGradient>
+    <linearGradient id="drop-grad" x1="96" y1="38" x2="96" y2="150" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#38bdf8" />
+      <stop offset="0.6" stop-color="#0ea5e9" />
+      <stop offset="1" stop-color="#0284c7" />
+    </linearGradient>
+    <filter id="drop-shadow" x="48" y="30" width="96" height="136" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#0284c7" flood-opacity="0.4" />
+    </filter>
+  </defs>
+</svg>

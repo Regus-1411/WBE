@@ -132,6 +132,47 @@ public class EmailServiceImpl implements EmailService {
 
     @Override
     @Async
+    public void sendAdminApprovalConfirmation(
+            String toEmail,
+            String adminName,
+            String username,
+            String apartmentName
+    ) {
+        log.info("📧 [EmailService] Preparing admin account approval confirmation for: {} ({})", toEmail, adminName);
+
+        if (!mailEnabled) {
+            log.info("📧 [EmailService] Mail disabled. Admin approval simulation -> Recipient: {}, Username: {}, Apt: {}", toEmail, username, apartmentName);
+            return;
+        }
+
+        String subject = "🎉 Account Approved & Activated — Welcome to DROP Water Management Portal (" + (apartmentName != null ? apartmentName : "Society") + ")";
+        String htmlContent = buildAdminApprovalTemplate(adminName, username, apartmentName);
+
+        sendHtmlEmail(toEmail, subject, htmlContent, username, null);
+    }
+
+    @Override
+    @Async
+    public void sendAdminRegistrationSubmitted(
+            String toEmail,
+            String adminName,
+            String apartmentName
+    ) {
+        log.info("📧 [EmailService] Preparing admin registration submitted confirmation for: {} ({})", toEmail, adminName);
+
+        if (!mailEnabled) {
+            log.info("📧 [EmailService] Mail disabled. Admin submitted simulation -> Recipient: {}, Apt: {}", toEmail, apartmentName);
+            return;
+        }
+
+        String subject = "📋 Society Registration Received — Pending Main Admin Verification (" + (apartmentName != null ? apartmentName : "Society") + ")";
+        String htmlContent = buildAdminSubmittedTemplate(adminName, apartmentName);
+
+        sendHtmlEmail(toEmail, subject, htmlContent, null, null);
+    }
+
+    @Override
+    @Async
     public void sendPasswordResetEmail(String toEmail, String fullName, String resetToken) {
         log.info("📧 [EmailService] Preparing password reset email for: {}", toEmail);
         String subject = "🔒 DROP Water System - Password Reset Request";
@@ -433,6 +474,108 @@ public class EmailServiceImpl implements EmailService {
                 "<p><a href='" + resetLink + "' style='background:#0284c7; color:#fff; padding:10px 20px; text-decoration:none; border-radius:6px; font-weight:bold;'>Reset Password</a></p>" +
                 "<p>If you did not request this, please ignore this email.</p>" +
                 "</body></html>";
+    }
+
+    private String buildAdminApprovalTemplate(String adminName, String username, String apartmentName) {
+        String societyTitle = (apartmentName != null && !apartmentName.isBlank()) ? apartmentName : "Community Water System";
+        String loginUrl = appUrl + "/login";
+
+        return "<!DOCTYPE html>" +
+                "<html>" +
+                "<head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'></head>" +
+                "<body style='margin:0; padding:0; background-color:#f1f5f9; font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif;'>" +
+                "  <table width='100%' border='0' cellspacing='0' cellpadding='0' style='background-color:#f1f5f9; padding: 40px 16px;'>" +
+                "    <tr>" +
+                "      <td align='center'>" +
+                "        <table width='100%' border='0' cellspacing='0' cellpadding='0' style='max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08); border: 1px solid #e2e8f0;'>" +
+                "          <tr>" +
+                "            <td style='background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 36px 32px; text-align: left;'>" +
+                "              <div style='display:inline-block; background: rgba(255, 255, 255, 0.2); padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; color: #ffffff; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px;'>" +
+                "                ✓ APPLICATION APPROVED & VERIFIED" +
+                "              </div>" +
+                "              <h1 style='margin: 0; color: #ffffff; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;'>" +
+                "                Welcome to DROP Platform!" +
+                "              </h1>" +
+                "              <p style='margin: 6px 0 0; color: #d1fae5; font-size: 14px; font-weight: 500;'>" +
+                "                " + escapeHtml(societyTitle) + " • Apartment Admin Account Activated" +
+                "              </p>" +
+                "            </td>" +
+                "          </tr>" +
+                "          <tr>" +
+                "            <td style='padding: 36px 32px; color: #334155; font-size: 15px; line-height: 1.6;'>" +
+                "              <p style='margin-top: 0; font-size: 16px; color: #0f172a; font-weight: 600;'>" +
+                "                Dear " + escapeHtml(adminName) + "," +
+                "              </p>" +
+                "              <p style='color: #475569; margin-bottom: 20px;'>" +
+                "                We are pleased to inform you that your registration for <strong>" + escapeHtml(societyTitle) + "</strong> and your submitted documents (Society Bond, Apartment Registration Certificate, and Authority Proof) have been <strong>verified and approved by the Main Administrator</strong>." +
+                "              </p>" +
+                "              <div style='background:#f0fdf4; border:1.5px solid #86efac; border-radius:12px; padding:20px; margin:24px 0;'>" +
+                "                <h3 style='margin:0 0 12px 0; color:#166534; font-size:15px;'>🎉 Your Society Admin Account is Ready</h3>" +
+                "                <div style='margin-bottom:8px; font-size:14px; color:#14532d;'><strong>Registered Society:</strong> " + escapeHtml(societyTitle) + "</div>" +
+                "                <div style='margin-bottom:8px; font-size:14px; color:#14532d;'><strong>Admin Username:</strong> <code style='font-weight:700; background:#dcfce7; padding:2px 8px; border-radius:4px;'>" + escapeHtml(username) + "</code></div>" +
+                "                <div style='font-size:14px; color:#14532d;'><strong>Status:</strong> <span style='color:#059669; font-weight:700;'>🟢 Active & Verified</span></div>" +
+                "              </div>" +
+                "              <p style='color: #475569;'>" +
+                "                You can now log in to your society management portal to configure smart meters, register flats, manage slab billing, monitor real-time water telemetry, and oversee community utility operations." +
+                "              </p>" +
+                "              <div style='text-align: center; margin: 32px 0 24px;'>" +
+                "                <a href='" + loginUrl + "' target='_blank' style='display: inline-block; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 700; font-size: 15px; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.4);'>" +
+                "                  Sign In to Management Dashboard →" +
+                "                </a>" +
+                "              </div>" +
+                "            </td>" +
+                "          </tr>" +
+                "          <tr>" +
+                "            <td style='background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 24px 32px; text-align: center; font-size: 12px; color: #94a3b8;'>" +
+                "              <p style='margin: 0 0 6px;'>© 2026 DROP Smart Water Management System. All rights reserved.</p>" +
+                "            </td>" +
+                "          </tr>" +
+                "        </table>" +
+                "      </td>" +
+                "    </tr>" +
+                "  </table>" +
+                "</body>" +
+                "</html>";
+    }
+
+    private String buildAdminSubmittedTemplate(String adminName, String apartmentName) {
+        String societyTitle = (apartmentName != null && !apartmentName.isBlank()) ? apartmentName : "Community";
+
+        return "<!DOCTYPE html>" +
+                "<html>" +
+                "<head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'></head>" +
+                "<body style='margin:0; padding:0; background-color:#f1f5f9; font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif;'>" +
+                "  <table width='100%' border='0' cellspacing='0' cellpadding='0' style='background-color:#f1f5f9; padding: 40px 16px;'>" +
+                "    <tr><td align='center'>" +
+                "      <table width='100%' border='0' cellspacing='0' cellpadding='0' style='max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08); border: 1px solid #e2e8f0;'>" +
+                "        <tr>" +
+                "          <td style='background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); padding: 32px; text-align: left;'>" +
+                "            <div style='background:rgba(255,255,255,0.2); display:inline-block; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; color:#ffffff;'>📋 APPLICATION SUBMITTED</div>" +
+                "            <h2 style='margin:10px 0 0; color:#ffffff; font-size:22px;'>Society Registration Received</h2>" +
+                "            <p style='margin:4px 0 0; color:#e0f2fe; font-size:14px;'>" + escapeHtml(societyTitle) + " • Pending Main Admin Verification</p>" +
+                "          </td>" +
+                "        </tr>" +
+                "        <tr>" +
+                "          <td style='padding: 32px; color: #334155; font-size: 15px; line-height: 1.6;'>" +
+                "            <p>Dear <strong>" + escapeHtml(adminName) + "</strong>,</p>" +
+                "            <p>Thank you for submitting your Apartment Admin registration for <strong>" + escapeHtml(societyTitle) + "</strong> on DROP Water Management System.</p>" +
+                "            <div style='background:#fef3c7; border:1px solid #fde68a; border-radius:10px; padding:18px; margin:20px 0; color:#92400e;'>" +
+                "              <strong>⏳ Next Steps — Verification in Progress:</strong><br>" +
+                "              Your submitted legal documents (Society Bond, Registration Certificate, and Authority Letter) are under review by the Main Administrator. Once approved, you will receive a confirmation email with full access to your society dashboard." +
+                "            </div>" +
+                "            <p style='font-size:13px; color:#64748b;'>If you have any questions or urgent queries, you may reply to this email.</p>" +
+                "          </td>" +
+                "        </tr>" +
+                "        <tr>" +
+                "          <td style='background-color:#f8fafc; border-top:1px solid #e2e8f0; padding:20px; text-align:center; font-size:12px; color:#94a3b8;'>" +
+                "            © 2026 DROP Water Management System" +
+                "          </td>" +
+                "        </tr>" +
+                "      </table>" +
+                "    </td></tr>" +
+                "  </table>" +
+                "</body>" +
+                "</html>";
     }
 
     private String escapeHtml(String text) {

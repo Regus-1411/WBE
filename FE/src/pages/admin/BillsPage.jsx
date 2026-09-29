@@ -640,9 +640,6 @@ function BillsPage() {
                 />
               </div>
 
-              <div style={{ background: "#f8fafc", padding: "0.85rem", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "0.78rem", color: "#64748b", marginBottom: "1.25rem" }}>
-                💡 <strong>Tip:</strong> Ensure your Google App Password or Brevo SMTP credentials are added to <code>BE/src/main/resources/application.properties</code>.
-              </div>
 
               <div className="modal-footer" style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
                 <button type="button" className="btn-secondary" onClick={() => setEmailModalOpen(false)}>

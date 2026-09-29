@@ -4,6 +4,14 @@ import LanguageSelector from "./LanguageSelector";
 import "./DashboardTopBar.css";
 
 const routeNames = {
+  "/superadmin/dashboard": "Main Admin Control Center",
+  "/superadmin/approvals": "Admin Approvals & Legal Docs",
+  "/superadmin/admins": "Apartment Admins Directory",
+  "/superadmin/apartments": "Societies & Communities",
+  "/superadmin/residents": "All Residents Directory",
+  "/superadmin/financials": "Global Financials",
+  "/superadmin/analytics": "Platform Analytics & Telemetry",
+  "/superadmin/audit": "Audit & Activity Feed",
   "/admin/dashboard": "Society Overview & Telemetry",
   "/admin/households": "Household Directory & Meters",
   "/admin/readings": "IoT Meter Readings & Logs",
@@ -23,15 +31,18 @@ export function DashboardTopBar() {
   const location = useLocation();
   const { user } = useAuth();
   const isResident = location.pathname.startsWith("/resident");
+  const isSuperAdmin = location.pathname.startsWith("/superadmin") || user?.role === "MAIN_ADMIN";
 
-  const pageTitle = routeNames[location.pathname] || (isResident ? "Resident Portal" : "Admin Console");
+  const pageTitle = routeNames[location.pathname] || (isSuperAdmin ? "Main Admin Console" : (isResident ? "Resident Portal" : "Admin Console"));
+  const portalTag = isSuperAdmin ? "Main Admin Master Console" : (isResident ? "Resident Portal" : "Community Management");
+  const userSub = isSuperAdmin ? "Platform Master Admin" : (isResident ? `Unit ${user?.householdUnitNumber || "B-402"}` : (user?.apartmentName || "Palm Meadows"));
 
   return (
     <header className="dash-topbar" id="dashboard-topbar">
       <div className="dash-topbar__left">
         <div className="dash-topbar__breadcrumbs">
           <span className="dash-topbar__portal-tag">
-            {isResident ? "Resident Portal" : "Community Management"}
+            {portalTag}
           </span>
           <span className="dash-topbar__slash">/</span>
           <span className="dash-topbar__page-title">{pageTitle}</span>
@@ -51,14 +62,14 @@ export function DashboardTopBar() {
         {/* User Identity Chip */}
         <div className="dash-topbar__user notranslate" id="dash-topbar-user" translate="no">
           <div className="dash-topbar__avatar notranslate" translate="no">
-            {user?.fullName ? user.fullName[0].toUpperCase() : isResident ? "R" : "A"}
+            {user?.fullName?.trim() ? user.fullName.trim()[0].toUpperCase() : isSuperAdmin ? "M" : (isResident ? "R" : "A")}
           </div>
           <div className="dash-topbar__user-text notranslate" translate="no">
             <span className="dash-topbar__user-name notranslate" translate="no">
-              {user?.fullName || user?.username || (isResident ? "Resident" : "Admin")}
+              {user?.fullName || user?.username || (isSuperAdmin ? "Main Admin" : (isResident ? "Resident" : "Admin"))}
             </span>
             <span className="dash-topbar__user-sub notranslate" translate="no">
-              {isResident ? `Unit ${user?.householdUnitNumber || "B-402"}` : (user?.apartmentName || "Palm Meadows")}
+              {userSub}
             </span>
           </div>
         </div>

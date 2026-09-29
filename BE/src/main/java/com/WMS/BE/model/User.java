@@ -51,6 +51,28 @@ public class User {
     @JsonIgnore
     private Household household;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "approval_status", length = 20)
+    private ApprovalStatus approvalStatus = ApprovalStatus.APPROVED;
+
+    @Column(name = "document_bond", columnDefinition = "LONGTEXT")
+    private String documentBond;
+
+    @Column(name = "document_certificate", columnDefinition = "LONGTEXT")
+    private String documentCertificate;
+
+    @Column(name = "document_id_proof", columnDefinition = "LONGTEXT")
+    private String documentIdProof;
+
+    @Column(name = "document_notes", columnDefinition = "LONGTEXT")
+    private String documentNotes;
+
+    @Column(name = "rejection_reason")
+    private String rejectionReason;
+
+    @Column(name = "approved_at")
+    private LocalDateTime approvedAt;
+
     @Column(name = "is_active")
     private Boolean isActive = true;
 
@@ -63,7 +85,14 @@ public class User {
     private LocalDateTime updatedAt;
 
     public enum Role {
+        MAIN_ADMIN,
         APARTMENT_ADMIN,
         RESIDENT
+    }
+
+    public enum ApprovalStatus {
+        APPROVED,
+        PENDING,
+        REJECTED
     }
 }

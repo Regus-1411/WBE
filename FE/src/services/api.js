@@ -116,6 +116,24 @@ export const notificationApi = {
       body: JSON.stringify({ email }),
     });
   },
+  sendCredentials: async (payload) => {
+    return request("/admin/notifications/send-credentials", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+  sendAdminApproval: async (payload) => {
+    return request("/admin/notifications/send-admin-approval", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+  sendAdminRegistrationSubmitted: async (payload) => {
+    return request("/admin/notifications/send-admin-registration-submitted", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
   sendBill: async (payload) => {
     return request("/admin/notifications/send-bill", {
       method: "POST",
@@ -134,5 +152,15 @@ export const notificationApi = {
       body: JSON.stringify(payload),
     });
   },
+};
+
+export const superAdminApi = {
+  getStats: async () => request("/superadmin/stats"),
+  getPendingAdmins: async () => request("/superadmin/pending-admins"),
+  getAllAdmins: async () => request("/superadmin/all-admins"),
+  getAllResidents: async () => request("/superadmin/all-residents"),
+  getAllApartments: async () => request("/superadmin/all-apartments"),
+  approveAdmin: async (id) => request(`/superadmin/approve-admin/${id}`, { method: "POST" }),
+  rejectAdmin: async (id, reason) => request(`/superadmin/reject-admin/${id}`, { method: "POST", body: JSON.stringify({ reason }) }),
 };
 
